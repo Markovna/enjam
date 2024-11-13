@@ -1,9 +1,9 @@
 #pragma once
 
-#include <enjam/enjam.h>
+#include <enjam/api.h>
 
 namespace Enjam {
 
-ENJAM_API void Print();
+ENJAM_API void Test(int argc, char* argv[]);
 
 }

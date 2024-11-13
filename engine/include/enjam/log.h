@@ -36,11 +36,11 @@ void Log::error(const char* location, fmt::format_string<Args...> format, Args &
 
 }
 
-#define EJ_LOG_S1(x) #x
-#define EJ_LOG_S2(x) EJ_LOG_S1(x)
-#define EJ_LOG_LOCATION __FILE__ ":" EJ_LOG_S2(__LINE__)
+#define __ENJAM_LOG_S1(x) #x
+#define __ENJAM_LOG_S2(x) __ENJAM_LOG_S1(x)
+#define __ENJAM_LOG_LOCATION __FILE__ ":" __ENJAM_LOG_S2(__LINE__)
 
-#define EJ_INFO(format, ...) Log::info(EJ_LOG_LOCATION, format, ##__VA_ARGS__)
-#define EJ_DEBUG(format, ...) Log::debug(EJ_LOG_LOCATION, format, ##__VA_ARGS__)
-#define EJ_WARN(format, ...) Log::warn(EJ_LOG_LOCATION, format, ##__VA_ARGS__)
-#define EJ_ERROR(format, ...) Log::error(EJ_LOG_LOCATION, format, ##__VA_ARGS__)
+#define ENJAM_INFO(format, ...) Enjam::Log::info(__ENJAM_LOG_LOCATION, format, ##__VA_ARGS__)
+#define ENJAM_DEBUG(format, ...) Enjam::Log::debug(__ENJAM_LOG_LOCATION, format, ##__VA_ARGS__)
+#define ENJAM_WARN(format, ...) Enjam::Log::warn(__ENJAM_LOG_LOCATION, format, ##__VA_ARGS__)
+#define ENJAM_ERROR(format, ...) Enjam::Log::error(__ENJAM_LOG_LOCATION, format, ##__VA_ARGS__)

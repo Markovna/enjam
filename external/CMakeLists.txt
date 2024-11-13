@@ -1,1 +1,1 @@
-add_subdirectory(fmt)
+add_subdirectory(fmt EXCLUDE_FROM_ALL)

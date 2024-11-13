@@ -1,3 +1,5 @@
 #pragma once
 
-#include "define.h"
+#include "compiler.h"
+#include "platform.h"
+#include "api.h"

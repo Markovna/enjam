@@ -10,7 +10,7 @@
 
 #endif
 
-#ifdef EJEXPORT
+#ifdef ENJAM_EXPORT
   #define ENJAM_API ENJAM_SYMBOL_EXPORT
 #else
   #define ENJAM_API ENJAM_SYMBOL_IMPORT

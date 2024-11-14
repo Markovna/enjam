@@ -6,7 +6,7 @@
 
 namespace Enjam {
 
-class ENJAM_API Log {
+class ENJAM_API Log final {
  public:
   template<typename... Args> static void info(const char* location, fmt::format_string<Args...> format, Args&&... args);
   template<typename... Args> static void debug(const char* location, fmt::format_string<Args...> format, Args&&... args);

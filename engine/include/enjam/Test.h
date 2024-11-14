@@ -1,6 +1,6 @@
 #pragma once
 
-#include <enjam/api.h>
+#include <enjam/enjam.h>
 
 namespace Enjam {
 

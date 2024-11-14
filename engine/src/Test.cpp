@@ -1,6 +1,7 @@
 #include <enjam/Test.h>
 #include <enjam/log.h>
 #include <enjam/library_loader.h>
+#include <enjam/window.h>
 
 namespace Enjam {
 
@@ -32,9 +33,15 @@ void Test(int argc, char* argv[]) {
   ENJAM_INFO("{}", exePath);
   LibraryLoader libLoader {};
 
+  Window window {};
+  window.getKeyPressEvent().add([](Window& wnd, Window::KeyPressEventData data) {
+    ENJAM_INFO("Input event called: {} {}", (uint16_t) data.keyCode, data.alt);
+  });
+
   while(true) {
     char a;
     std::cin >> a;
+    window.update();
 
     loadLib(libLoader, exePath, "game");
   }

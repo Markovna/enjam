@@ -1,7 +1,7 @@
 #include <enjam/library_loader.h>
 #include <enjam/enjam.h>
 
-#if defined(KLAYGE_COMPILER_MSVC) || defined(KLAYGE_COMPILER_CLANG)
+#if ENJAM_COMPILER_MSVC || ENJAM_COMPILER_CLANG
 #define LIB_PREFIX ""
 #else
 #define LIB_PREFIX "lib"

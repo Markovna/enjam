@@ -1,5 +1,5 @@
 #include <enjam/library_loader.h>
-#include <enjam/enjam.h>
+#include "enjam/defines.h"
 
 #if ENJAM_COMPILER_MSVC || ENJAM_COMPILER_CLANG
 #define LIB_PREFIX ""

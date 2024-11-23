@@ -1,6 +1,6 @@
 #pragma once
 
-#include <enjam/enjam.h>
+#include "defines.h"
 
 namespace Enjam {
 

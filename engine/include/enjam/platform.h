@@ -1,19 +1,14 @@
-#pragma once
+#ifndef INCLUDE_ENJAM_PLATFORM_H_
+#define INCLUDE_ENJAM_PLATFORM_H_
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-  #define ENJAM_PLATFORM_WINDOWS
+#include <enjam/defines.h>
 
-#elif defined(linux) || defined(__linux) || defined(__linux__)
-  #define ENJAM_PLATFORM_LINUX
+#if defined(ENJAM_PLATFORM_WINDOWS)
+#include <enjam/platform_windows.h>
 
-#elif defined(__APPLE__)
-  #include <TargetConditionals.h>
-    #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-      #define ENJAM_PLATFORM_IOS
-    #else
-      #define ENJAM_PLATFORM_DARWIN
-    #endif
-  #else
-    #error "Unknown/unsupported platform"
+#elif defined(ENJAM_PLATFORM_DARWIN)
+#include <enjam/platform_glfw.h>
 
 #endif
+
+#endif //INCLUDE_ENJAM_PLATFORM_H_

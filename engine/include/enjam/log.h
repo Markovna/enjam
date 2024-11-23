@@ -1,6 +1,6 @@
 #pragma once
 
-#include <enjam/enjam.h>
+#include <enjam/defines.h>
 #include <fmt/format.h>
 #include <iostream>
 

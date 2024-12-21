@@ -1,5 +1,4 @@
 #include <enjam/platform_glfw.h>
-#include <enjam/engine.h>
 #include <enjam/input_events.h>
 #include <enjam/input.h>
 #include <enjam/assert.h>
@@ -7,10 +6,18 @@
 
 namespace Enjam {
 
-void PlatformGlfw::init(Engine& engine) {
-  ENJAM_ASSERT(!initialized);
+GLLoaderProc PlatformGlfw::GetGLLoaderProc() {
+  return (GLLoaderProc) glfwGetProcAddress;
+}
 
-  this->engine = &engine;
+PlatformGlfw::PlatformGlfw(Input& input)
+  : input(input)
+  , initialized(false) {
+
+}
+
+void PlatformGlfw::init() {
+  ENJAM_ASSERT(!initialized);
 
   int status = glfwInit();
   ENJAM_ASSERT(status == GLFW_TRUE);
@@ -25,7 +32,6 @@ void PlatformGlfw::init(Engine& engine) {
   ENJAM_ASSERT(win != nullptr);
 
   glfwSetWindowUserPointer(win, this);
-
   glfwMakeContextCurrent(win);
 
   // set input callbacks
@@ -45,7 +51,7 @@ void PlatformGlfw::pollInputEvents() {
 }
 
 void PlatformGlfw::onKeyRelease(int key, int scancode, int action, int mods) {
-  engine->getInput().onKeyRelease().call(
+  input.onKeyRelease().call(
       KeyReleaseEventArgs {
           .keyCode = KeyCode(key),
           .control = bool(mods & GLFW_MOD_CONTROL),
@@ -56,7 +62,7 @@ void PlatformGlfw::onKeyRelease(int key, int scancode, int action, int mods) {
 }
 
 void PlatformGlfw::onKeyPress(int key, int scancode, int action, int mods) {
-  engine->getInput().onKeyPress().call(
+  input.onKeyPress().call(
       KeyPressEventArgs {
           .keyCode = KeyCode(key),
           .control = bool(mods & GLFW_MOD_CONTROL),
@@ -68,7 +74,7 @@ void PlatformGlfw::onKeyPress(int key, int scancode, int action, int mods) {
 }
 
 void PlatformGlfw::shutdown() {
-
+  glfwTerminate();
 }
 
 }

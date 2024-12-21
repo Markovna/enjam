@@ -3,9 +3,11 @@
 #include <enjam/assert.h>
 #include <enjam/input.h>
 #include <enjam/library_loader.h>
-#include <enjam/library_loader.h>
 #include <enjam/platform.h>
-#include <enjam/engine.h>
+#include <enjam/renderer.h>
+#include <enjam/renderer_backend.h>
+#include <enjam/renderer_backend_opengl.h>
+#include <memory>
 
 namespace Enjam {
 
@@ -37,14 +39,17 @@ void Test(int argc, char* argv[]) {
   ENJAM_INFO("{}", exePath);
   LibraryLoader libLoader {};
 
-  Platform platform {};
-  Engine engine {};
+  auto input = Input { };
+  auto platform = Platform { input };
+  auto rendererBackend = RendererBackendOpengl { platform };
+  auto renderer = Renderer { rendererBackend };
 
-  platform.init(engine);
+  platform.init();
+  renderer.init();
 
   bool isRunning = true;
 
-  engine.getInput().onKeyPress().add([&](auto args) {
+  input.onKeyPress().add([&](auto args) {
     ENJAM_INFO("Key Press event called: {} {}", (uint16_t) args.keyCode, args.alt);
 
     if(args.keyCode == KeyCode::R && args.alt) {
@@ -58,11 +63,14 @@ void Test(int argc, char* argv[]) {
 
   while(isRunning) {
     platform.pollInputEvents();
-    engine.update();
+    input.update();
+
+    RenderView renderView { };
+    renderer.draw(renderView);
   }
 
+  renderer.shutdown();
   platform.shutdown();
-
 }
 
 }

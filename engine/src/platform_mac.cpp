@@ -6,7 +6,11 @@
 
 namespace Enjam {
 
-void PlatformMac::init(Engine& engine) {
+PlatformMac::PlatformMac(Input& input) {
+
+}
+
+void PlatformMac::init() {
 
 }
 

@@ -17,7 +17,7 @@ class Engine;
 
 class ENJAM_API Input final {
  public:
-  explicit Input(Engine& engine);
+  explicit Input();
   ~Input();
 
   void update();
@@ -26,7 +26,6 @@ class ENJAM_API Input final {
   KeyReleaseEvent& onKeyRelease() { return keyReleaseEvent; }
 
  private:
-  Engine& engine;
   KeyPressEvent keyPressEvent;
   KeyReleaseEvent keyReleaseEvent;
   MouseMoveEvent mouseMoveEvent;

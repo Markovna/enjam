@@ -8,11 +8,11 @@ namespace Enjam {
 
 using Platform = class PlatformWindows;
 
-class Engine;
+class Input;
 
 class ENJAM_API PlatformWindows {
  public:
-  void init(Engine& engine);
+  void init();
   void shutdown();
 };
 

@@ -9,11 +9,12 @@ namespace Enjam {
 
 using Platform = class PlatformMac;
 
-class Engine;
+class Input;
 
 class ENJAM_API PlatformMac {
  public:
-  void init(Engine& engine);
+  explicit PlatformMac(Input& input);
+  void init();
   void pollInputEvents();
   void shutdown();
 };

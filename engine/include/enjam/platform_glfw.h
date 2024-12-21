@@ -7,21 +7,25 @@ namespace Enjam {
 
 using Platform = class PlatformGlfw;
 
-class Engine;
+typedef void *(*GLLoaderProc)(const char *name);
+
+class Input;
 
 class ENJAM_API PlatformGlfw {
 public:
-  void init(Engine& engine);
+  explicit PlatformGlfw(Input& input);
+  void init();
   void pollInputEvents();
   void shutdown();
+  GLLoaderProc GetGLLoaderProc();
 
 private:
   void onKeyPress(int key, int scancode, int action, int mods);
   void onKeyRelease(int key, int scancode, int action, int mods);
 
 private:
-  bool initialized;
-  Engine* engine;
+  bool initialized = false;
+  Input& input;
 };
 
 }

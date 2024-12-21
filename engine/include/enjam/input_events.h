@@ -3,15 +3,6 @@
 
 namespace Enjam {
 
-enum class InputEventType {
-  KeyPress,
-  KeyRelease,
-  MouseMove,
-  MouseUp,
-  MouseDown,
-  MouseScroll
-};
-
 enum class KeyCode {
   Space = 32,
   Apostrophe = 39, /* ' */

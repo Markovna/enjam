@@ -2,18 +2,36 @@
 #include <enjam/input_events.h>
 #include <enjam/input.h>
 #include <enjam/assert.h>
+#include <enjam/renderer_backend_opengl.h>
 #include <GLFW/glfw3.h>
 
 namespace Enjam {
-
-GLLoaderProc PlatformGlfw::GetGLLoaderProc() {
-  return (GLLoaderProc) glfwGetProcAddress;
-}
 
 PlatformGlfw::PlatformGlfw(Input& input)
   : input(input)
   , initialized(false) {
 
+}
+
+RendererBackend* PlatformGlfw::createRendererBackend(RendererBackendType type) {
+  ENJAM_ASSERT(window);
+
+  switch (type) {
+    case DEFAULT:
+    case OPENGL: {
+      GLSwapChain swapChain {
+          .makeCurrent = [this]() { glfwMakeContextCurrent(window); },
+          .swapBuffers = [this]() { glfwSwapBuffers(window); }
+      };
+      return new RendererBackendOpengl((GLLoaderProc) glfwGetProcAddress, swapChain);
+    }
+    case VULKAN:
+      ENJAM_ERROR("VULKAN renderer backend is not supported for current platform.");
+      return nullptr;
+    case DIRECTX:
+      ENJAM_ERROR("DIRECTX renderer backend is not supported for current platform.");
+      return nullptr;
+  }
 }
 
 void PlatformGlfw::init() {
@@ -28,14 +46,19 @@ void PlatformGlfw::init() {
     ENJAM_ERROR("GLFW error: {} (Code: {})", description, error_code);
   });
 
-  GLFWwindow* win = glfwCreateWindow(800, 640, "Enjam", NULL, NULL);
-  ENJAM_ASSERT(win != nullptr);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-  glfwSetWindowUserPointer(win, this);
-  glfwMakeContextCurrent(win);
+  window = glfwCreateWindow(800, 640, "Enjam", NULL, NULL);
+  ENJAM_ASSERT(window != nullptr);
+
+  glfwSetWindowUserPointer(window, this);
+  glfwMakeContextCurrent(window);
 
   // set input callbacks
-  glfwSetKeyCallback(win, [](GLFWwindow *w, int key, int scancode, int action, int mods) {
+  glfwSetKeyCallback(window, [](GLFWwindow *w, int key, int scancode, int action, int mods) {
     auto* platform = (PlatformGlfw*) glfwGetWindowUserPointer(w);
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
       platform->onKeyPress(key, scancode, action, mods);

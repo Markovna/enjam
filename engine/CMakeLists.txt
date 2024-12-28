@@ -6,7 +6,8 @@ add_library(enjam STATIC
         src/platform_win.cpp
         src/library_loader.cpp
         src/renderer.cpp
-        src/renderer_backend_opengl.cpp)
+        src/renderer_backend_opengl.cpp
+        src/opengl_types.h)
 
 target_compile_definitions(enjam PRIVATE ENJAM_EXPORT)
 target_include_directories(enjam PUBLIC include)

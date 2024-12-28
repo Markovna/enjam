@@ -2,22 +2,24 @@
 #define INCLUDE_ENJAM_PLATFORM_GLFW_H_
 
 #include <enjam/defines.h>
+#include <enjam/renderer_backend_type.h>
+
+class GLFWwindow;
 
 namespace Enjam {
 
 using Platform = class PlatformGlfw;
 
-typedef void *(*GLLoaderProc)(const char *name);
-
 class Input;
+class RendererBackend;
 
 class ENJAM_API PlatformGlfw {
-public:
+ public:
   explicit PlatformGlfw(Input& input);
   void init();
+  RendererBackend* createRendererBackend(RendererBackendType);
   void pollInputEvents();
   void shutdown();
-  GLLoaderProc GetGLLoaderProc();
 
 private:
   void onKeyPress(int key, int scancode, int action, int mods);
@@ -26,6 +28,7 @@ private:
 private:
   bool initialized = false;
   Input& input;
+  GLFWwindow* window;
 };
 
 }

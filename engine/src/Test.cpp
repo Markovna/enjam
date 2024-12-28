@@ -6,60 +6,26 @@
 #include <enjam/platform.h>
 #include <enjam/renderer.h>
 #include <enjam/renderer_backend.h>
-#include <enjam/renderer_backend_opengl.h>
+#include <enjam/renderer_backend_type.h>
 #include <memory>
 
 namespace Enjam {
 
-typedef void (*GameLoadedFunc)();
-
-static void loadLib(LibraryLoader& libLoader, const std::string& libPath, const std::string& name) {
-  libLoader.free();
-
-  bool dllLoaded = libLoader.load(libPath, name);
-  if(!dllLoaded) {
-    ENJAM_ERROR("Loading dll {} at path {} failed", name, libPath);
-    return;
-  }
-
-  auto* funcPtr = reinterpret_cast<GameLoadedFunc>(libLoader.getProcAddress("gameLoaded"));
-  if(funcPtr == nullptr) {
-    ENJAM_ERROR("Loading dll {} at path {} failed", name, libPath);
-    libLoader.free();
-    return;
-  }
-
-  funcPtr();
-}
+static void bindKeys(Input& input, bool& isRunning, const std::string& exePath);
 
 void Test(int argc, char* argv[]) {
   std::string exePath = argv[0];
-  exePath.erase(exePath.find_last_of('/'));
-
-  ENJAM_INFO("{}", exePath);
-  LibraryLoader libLoader {};
 
   auto input = Input { };
   auto platform = Platform { input };
-  auto rendererBackend = RendererBackendOpengl { platform };
-  auto renderer = Renderer { rendererBackend };
+  auto renderer = Renderer { platform };
 
   platform.init();
   renderer.init();
 
   bool isRunning = true;
 
-  input.onKeyPress().add([&](auto args) {
-    ENJAM_INFO("Key Press event called: {} {}", (uint16_t) args.keyCode, args.alt);
-
-    if(args.keyCode == KeyCode::R && args.alt) {
-      loadLib(libLoader, exePath, "game");
-    }
-
-    if(args.keyCode == KeyCode::Escape) {
-      isRunning = false;
-    }
-  });
+  bindKeys(input, isRunning, exePath);
 
   while(isRunning) {
     platform.pollInputEvents();
@@ -71,6 +37,47 @@ void Test(int argc, char* argv[]) {
 
   renderer.shutdown();
   platform.shutdown();
+}
+
+static void loadLib(LibraryLoader& libLoader, const std::string& libPath, const std::string& name) {
+  libLoader.free();
+
+  bool dllLoaded = libLoader.load(libPath, name);
+  if(!dllLoaded) {
+    ENJAM_ERROR("Loading dll {} at path {} failed", name, libPath);
+    return;
+  }
+
+  typedef void (*GameLoadedFunc)();
+
+  auto* funcPtr = reinterpret_cast<GameLoadedFunc>(libLoader.getProcAddress("gameLoaded"));
+  if(funcPtr == nullptr) {
+    ENJAM_ERROR("Loading dll {} at path {} failed", name, libPath);
+    libLoader.free();
+    return;
+  }
+
+  funcPtr();
+}
+
+void bindKeys(Input& input, bool& isRunning, const std::string& exePath) {
+  static std::string libPath { exePath, 0, exePath.find_last_of('/') };
+
+  ENJAM_INFO("{}", libPath);
+
+  static LibraryLoader libLoader {};
+
+  input.onKeyPress().add([&](auto args) {
+    ENJAM_INFO("Key Press event called: {} {}", (uint16_t) args.keyCode, args.alt);
+
+    if(args.keyCode == KeyCode::R && args.super) {
+      loadLib(libLoader, libPath, "game");
+    }
+
+    if(args.keyCode == KeyCode::Escape) {
+      isRunning = false;
+    }
+  });
 }
 
 }

@@ -13,8 +13,6 @@ using MouseUpEvent = Event<const MouseUpEventArgs&>;
 using MouseDownEvent = Event<const MouseDownEventArgs&>;
 using MouseScrollEvent = Event<const MouseScrollEventArgs&>;
 
-class Engine;
-
 class ENJAM_API Input final {
  public:
   explicit Input();

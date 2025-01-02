@@ -37,19 +37,13 @@
 
 #endif
 
-// --- API Defines ---
-#ifdef ENJAM_PLATFORM_WINDOWS
-  #define __ENJAM_SYMBOL_EXPORT __declspec(dllexport)
-  #define __ENJAM_SYMBOL_IMPORT __declspec(dllimport)
-
-#else
-  #define __ENJAM_SYMBOL_EXPORT __attribute__((visibility("default")))
-  #define __ENJAM_SYMBOL_IMPORT
-
+// compatibility with non-clang compilers...
+#ifndef __has_attribute
+  #define __has_attribute(x) 0
 #endif
 
-#ifdef ENJAM_EXPORT
-  #define ENJAM_API __ENJAM_SYMBOL_EXPORT
+#if __has_attribute(visibility)
+  #define ENJAM_API  __attribute__((visibility("default")))
 #else
-  #define ENJAM_API __ENJAM_SYMBOL_IMPORT
+  #define ENJAM_API
 #endif

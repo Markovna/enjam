@@ -3,6 +3,7 @@
 
 #include <enjam/defines.h>
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <utility>
 
@@ -120,10 +121,9 @@ struct BufferDataDesc {
   BufferDataDesc(BufferDataDesc&& other) noexcept
     : data(other.data)
     , size(other.size)
-    , onConsumed(other.onConsumed) {
+    , onConsumed(std::move(other.onConsumed)) {
     other.data = nullptr;
     other.size = 0;
-    other.onConsumed = nullptr;
   }
 
   BufferDataDesc(void* data, uint32_t size, Callback onConsumed = nullptr)

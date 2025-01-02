@@ -49,6 +49,9 @@ constexpr inline GLint toGLVertexAttribSize(VertexAttributeType type) {
     case Type::UINT4:
       return 4;
   }
+
+  ENJAM_ASSERT(false && "Unknown vertex attribute type");
+  return GL_NONE;
 }
 
 constexpr inline GLenum toGLVertexAttribType(VertexAttributeType type) {
@@ -96,6 +99,9 @@ constexpr inline GLenum toGLVertexAttribType(VertexAttributeType type) {
     case Type::UINT4:
       return GL_UNSIGNED_INT;
   }
+
+  ENJAM_ASSERT(false && "Unknown vertex attribute type");
+  return GL_NONE;
 }
 
 }

@@ -8,43 +8,6 @@ namespace Enjam {
 
 template<class T> class Handle;
 
-template<class T>
-class FreeList {
- public:
-
-  explicit FreeList(uint32_t size) {
-    head = operator new(sizeof(Node) * size, alignment);
-    auto curr = head;
-    for(auto i = 0; i < size; ++i) {
-      auto next = head[i * alignment];
-      curr->next = next;
-      curr = next;
-    }
-  }
-
-  T* pop() {
-      auto ret = head;
-      head = head->next;
-      return &ret->value;
-  }
-
-  void push(T* value) {
-    Node* node = reinterpret_cast<Node*>(value);
-    node->next = head;
-    head = node;
-  }
-
- private:
-  struct Node {
-    T value;
-    Node* next;
-  };
-
-  static constexpr auto alignment = std::alignment_of<Node>();
-
-  Node* head;
-};
-
 template<class ...TYPES>
 class HandleAllocator final {
  private:

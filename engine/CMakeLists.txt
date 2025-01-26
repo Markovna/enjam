@@ -2,6 +2,7 @@ set(ENJAM_SOURCES
         src/Test.cpp
         src/input.cpp
         src/platform_glfw.cpp
+        src/program.cpp
         src/platform_mac.cpp
         src/platform_win.cpp
         src/library_loader.cpp
@@ -18,6 +19,7 @@ set(ENJAM_HEADERS
         include/enjam/input_events.h
         include/enjam/library_loader.h
         include/enjam/log.h
+        include/enjam/program.h
         include/enjam/platform.h
         include/enjam/platform_glfw.h
         include/enjam/platform_mac.h

@@ -20,8 +20,8 @@ RendererBackend* PlatformGlfw::createRendererBackend(RendererBackendType type) {
     case DEFAULT:
     case OPENGL: {
       GLSwapChain swapChain {
-          .makeCurrent = [this]() { glfwMakeContextCurrent(window); },
-          .swapBuffers = [this]() { glfwSwapBuffers(window); }
+          .makeCurrent = [win = window]() { glfwMakeContextCurrent(win); },
+          .swapBuffers = [win = window]() { glfwSwapBuffers(win); }
       };
       return new RendererBackendOpengl((GLLoaderProc) glfwGetProcAddress, swapChain);
     }

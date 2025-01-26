@@ -42,75 +42,12 @@ static bool loadGLLoaderIfNeeded(GLLoaderProc glLoaderProc) {
   return glLoaded;
 }
 
-static void create_temp_shader(GLuint* program) {
-  const char *vertexShaderSource = "#version 410 core\n"
-                                   "layout (location = 0) in vec2 aPos;\n"
-                                   "void main()\n"
-                                   "{\n"
-                                   "   gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
-                                   "}\0";
-  const char *fragmentShaderSource = "#version 410 core\n"
-                                     "out vec4 FragColor;\n"
-                                     "void main()\n"
-                                     "{\n"
-                                     "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-                                     "}\n\0";
-
-  // build and compile our shader program
-  // ------------------------------------
-  // vertex shader
-  unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-  glCompileShader(vertexShader);
-  // check for shader compile errors
-  int success;
-  char infoLog[512];
-  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-  if (!success)
-  {
-    glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-    std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-  }
-  // fragment shader
-  unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-  glCompileShader(fragmentShader);
-  // check for shader compile errors
-  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-  if (!success)
-  {
-    glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-    std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-  }
-  // link shaders
-  unsigned int shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
-  glLinkProgram(shaderProgram);
-  // check for linking errors
-  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-  if (!success) {
-    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-    std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-  }
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
-  *program = shaderProgram;
-}
-
 bool RendererBackendOpengl::init() {
   bool loaded = loadGLLoaderIfNeeded(loaderProc);
   if (!loaded) {
     ENJAM_ERROR("Failed to load OpenGL functions");
     return false;
   }
-
-  GL_CHECK_ERRORS();
-
-  create_temp_shader(&program);
-  GL_CHECK_ERRORS();
-
-  ENJAM_ASSERT(program);
 
   glGenVertexArrays(1, &defaultVertexArray);
   GL_CHECK_ERRORS();
@@ -133,6 +70,62 @@ void RendererBackendOpengl::beginFrame() {
 
 void RendererBackendOpengl::endFrame() {
   swapChain.swapBuffers();
+}
+
+uint32_t compileShader(GLenum stage, const char* str) {
+  uint32_t id;
+  id = glCreateShader(stage);
+  glShaderSource(id, 1, &str, NULL);
+  glCompileShader(id);
+
+  // check for compile errors
+  int32_t success;
+  glGetShaderiv(id, GL_COMPILE_STATUS, &success);
+  if (!success) {
+    char infoLog[512];
+    glGetShaderInfoLog(id, 512, NULL, infoLog);
+    ENJAM_ERROR("GLRendererAPI shader compile error #{}", infoLog);
+  }
+  return id;
+}
+
+ProgramHandle RendererBackendOpengl::createProgram(ProgramData& data) {
+  auto ph = handleAllocator.allocAndConstruct<GLProgram>();
+  auto p = handleAllocator.cast<GLProgram*>(ph);
+
+  uint32_t id = glCreateProgram();
+
+  auto& source = data.getSource();
+  uint32_t vertex = compileShader(GL_VERTEX_SHADER, source[(size_t)ShaderStage::VERTEX].c_str());
+  uint32_t fragment = compileShader(GL_FRAGMENT_SHADER, source[(size_t)ShaderStage::FRAGMENT].c_str());
+
+  glAttachShader(id, vertex);
+  glAttachShader(id, fragment);
+  glLinkProgram(id);
+
+  int32_t success;
+  glGetProgramiv(id, GL_LINK_STATUS, &success);
+  if (!success) {
+    char infoLog[512];
+    glGetProgramInfoLog(id, 512, NULL, infoLog);
+    ENJAM_ERROR("GLRendererAPI shader compile error #{}", infoLog);
+  }
+
+  glDeleteShader(vertex);
+  glDeleteShader(fragment);
+
+  GL_CHECK_ERRORS();
+
+  p->id = id;
+  return ph;
+}
+
+void RendererBackendOpengl::destroyProgram(ProgramHandle ph) {
+  auto p = handleAllocator.cast<GLProgram*>(ph);
+  glDeleteProgram(p->id);
+  GL_CHECK_ERRORS();
+
+  handleAllocator.dealloc(ph, p);
 }
 
 VertexBufferHandle RendererBackendOpengl::createVertexBuffer(VertexArrayDesc vertexArrayDesc) {
@@ -219,7 +212,7 @@ void RendererBackendOpengl::destroyBufferData(BufferDataHandle bdh) {
   handleAllocator.dealloc(bdh, bd);
 }
 
-void RendererBackendOpengl::bindVertexArray(const VertexArrayDesc& vertexArray) {
+void RendererBackendOpengl::updateVertexArray(const VertexArrayDesc& vertexArray) {
   for(auto i = 0; i < vertexArray.attributes.size(); ++i) {
     const VertexAttribute& attribute = vertexArray.attributes[i];
     bool enabled = attribute.flags & VertexAttribute::FLAG_ENABLED;
@@ -242,16 +235,17 @@ void RendererBackendOpengl::bindVertexArray(const VertexArrayDesc& vertexArray) 
 
 }
 
-void RendererBackendOpengl::draw(VertexBufferHandle vbh, IndexBufferHandle ibh, uint32_t count) {
+void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, IndexBufferHandle ibh, uint32_t count) {
+  auto p = handleAllocator.cast<GLProgram*>(ph);
   auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
   auto ib = handleAllocator.cast<GLIndexBuffer*>(ibh);
 
-  glUseProgram(program);
+  glUseProgram(p->id);
 
   glBindVertexArray(defaultVertexArray);
 
   glBindBuffer(GL_ARRAY_BUFFER, vb->bufferId);
-  bindVertexArray(vb->vertexArray);
+  updateVertexArray(vb->vertexArray);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->id);
   glDrawElements(GL_TRIANGLES, (GLsizei) count, GL_UNSIGNED_INT, nullptr);

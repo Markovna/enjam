@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <utility>
+#include "program.h"
 
 namespace Enjam {
 
@@ -86,10 +87,12 @@ enum class VertexAttributeType : uint8_t {
 
 struct VertexBuffer {};
 struct IndexBuffer {};
+struct Program {};
 struct BufferData {};
 
 using VertexBufferHandle = Handle<VertexBuffer>;
 using IndexBufferHandle = Handle<IndexBuffer>;
+using ProgramHandle = Handle<Program>;
 using BufferDataHandle = Handle<BufferData>;
 
 struct VertexAttribute {
@@ -152,7 +155,10 @@ class ENJAM_API RendererBackend {
   virtual void beginFrame() = 0;
   virtual void endFrame() = 0;
 
-  virtual void draw(VertexBufferHandle, IndexBufferHandle, uint32_t count) = 0;
+  virtual void draw(ProgramHandle, VertexBufferHandle, IndexBufferHandle, uint32_t count) = 0;
+
+  virtual ProgramHandle createProgram(ProgramData&) = 0;
+  virtual void destroyProgram(ProgramHandle) = 0;
 
   virtual VertexBufferHandle createVertexBuffer(VertexArrayDesc) = 0;
   virtual void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) = 0;

@@ -19,6 +19,10 @@ struct GLSwapChain {
   SwapBuffersFunc swapBuffers;
 };
 
+struct GLProgram : public Program {
+  GLuint id = 0;
+};
+
 struct GLVertexBuffer : public VertexBuffer {
   GLuint bufferId = 0;
   VertexArrayDesc vertexArray;
@@ -36,7 +40,7 @@ struct GLBufferData : public BufferData {
 
 class RendererBackendOpengl : public RendererBackend {
  public:
-  using HandleAllocator = HandleAllocator<GLVertexBuffer, GLIndexBuffer, GLBufferData>;
+  using HandleAllocator = HandleAllocator<GLVertexBuffer, GLIndexBuffer, GLProgram, GLBufferData>;
 
   explicit RendererBackendOpengl(GLLoaderProc, GLSwapChain);
 
@@ -46,7 +50,10 @@ class RendererBackendOpengl : public RendererBackend {
   void beginFrame() override;
   void endFrame() override;
 
-  void draw(VertexBufferHandle, IndexBufferHandle, uint32_t count) override;
+  void draw(ProgramHandle, VertexBufferHandle, IndexBufferHandle, uint32_t count) override;
+
+  ProgramHandle createProgram(ProgramData&) override;
+  void destroyProgram(ProgramHandle) override;
 
   VertexBufferHandle createVertexBuffer(VertexArrayDesc) override;
   void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) override;
@@ -61,13 +68,12 @@ class RendererBackendOpengl : public RendererBackend {
   void destroyBufferData(BufferDataHandle) override;
 
  private:
-  void bindVertexArray(const VertexArrayDesc&);
+  void updateVertexArray(const VertexArrayDesc&);
 
  private:
   GLLoaderProc loaderProc;
   GLSwapChain swapChain;
   HandleAllocator handleAllocator;
-  GLuint program;
   GLuint defaultVertexArray;
 };
 

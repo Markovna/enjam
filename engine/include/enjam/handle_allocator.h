@@ -43,18 +43,18 @@ class HandleAllocator final {
     node.tags |= NODE_FREE_TAG;
   }
 
-  template<class D, class ...ARGS> Handle<D> allocAndConstruct(ARGS&& ...) {
+  template<class D, class ...ARGS> Handle<D> allocAndConstruct(ARGS&&... args) {
     auto& pool = getPool<D>();
     auto first = std::find_if(pool.begin(), pool.end(), [](auto& node) { return node.tags & NODE_FREE_TAG; });
     if(first != pool.end()) {
-      first->value = D(std::forward<ARGS>...);
+      first->value = D(std::forward<ARGS>(args)...);
       first->tags ^= NODE_FREE_TAG;
       auto idx = std::distance(pool.begin(), first);
       return Handle<D> { static_cast<typename Handle<D>::HandleId>(idx) };
     }
 
     auto idx = pool.size();
-    pool.emplace_back(D(std::forward<ARGS>...));
+    pool.emplace_back(D(std::forward<ARGS>(args)...));
     return Handle<D> { static_cast<typename Handle<D>::HandleId>(idx) };
   }
 

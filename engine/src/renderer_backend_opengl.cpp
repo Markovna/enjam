@@ -1,6 +1,9 @@
 #include <enjam/renderer_backend_opengl.h>
 #include <enjam/log.h>
 #include <enjam/assert.h>
+#include <enjam/type_traits_helpers.h>
+
+#include <utility>
 
 #include "opengl_types.h"
 
@@ -25,7 +28,7 @@ static void checkErrors(const char* location) {
 
 RendererBackendOpengl::RendererBackendOpengl(GLLoaderProc loaderProc, GLSwapChain swapChain)
   : loaderProc(loaderProc)
-  , swapChain(swapChain)
+  , swapChain(std::move(swapChain))
   { }
 
 static bool loadGLLoaderIfNeeded(GLLoaderProc glLoaderProc) {
@@ -116,6 +119,16 @@ ProgramHandle RendererBackendOpengl::createProgram(ProgramData& data) {
 
   GL_CHECK_ERRORS();
 
+  ProgramData::DescriptorsMap& descriptors = data.getDescriptors();
+  for(auto binding = 0; binding < descriptors.size(); ++binding) {
+    auto& desc = descriptors[binding];
+    if(desc.name.empty()) { continue; }
+
+    uint32_t index = glGetUniformBlockIndex(id, desc.name.c_str());
+    glUniformBlockBinding(id, index, binding);
+  }
+  GL_CHECK_ERRORS();
+
   p->id = id;
   return ph;
 }
@@ -126,6 +139,37 @@ void RendererBackendOpengl::destroyProgram(ProgramHandle ph) {
   GL_CHECK_ERRORS();
 
   handleAllocator.dealloc(ph, p);
+}
+
+DescriptorSetHandle RendererBackendOpengl::createDescriptorSet(DescriptorSetData&& data) {
+  auto dsh = handleAllocator.allocAndConstruct<GLDescriptorSet>(std::move(data));
+  return dsh;
+}
+
+void RendererBackendOpengl::destroyDescriptorSet(DescriptorSetHandle dsh) {
+  auto ds = handleAllocator.cast<GLDescriptorSet*>(dsh);
+
+  handleAllocator.dealloc(dsh, ds);
+}
+
+void RendererBackendOpengl::updateDescriptorSetBuffer(DescriptorSetHandle dsh, uint8_t binding, BufferDataHandle bdh, uint32_t size, uint32_t offset) {
+  auto ds = handleAllocator.cast<GLDescriptorSet*>(dsh);
+  auto bd = handleAllocator.cast<GLBufferData*>(bdh);
+
+  ENJAM_ASSERT(bd->target == GL_UNIFORM_BUFFER);
+
+  auto& buffer = std::get<GLDescriptorBuffer>(ds->descriptors[binding]);
+  buffer.id = bd->id;
+  buffer.size = size;
+  buffer.offset = offset;
+}
+
+void RendererBackendOpengl::bindDescriptorSet(DescriptorSetHandle dsh) {
+  boundDescriptorSetHandle = dsh;
+}
+
+void GLDescriptorBuffer::bind(uint8_t binding) const {
+  glBindBufferRange(GL_UNIFORM_BUFFER, binding, id, offset, size);
 }
 
 VertexBufferHandle RendererBackendOpengl::createVertexBuffer(VertexArrayDesc vertexArrayDesc) {
@@ -139,6 +183,7 @@ VertexBufferHandle RendererBackendOpengl::createVertexBuffer(VertexArrayDesc ver
 void RendererBackendOpengl::assignVertexBufferData(VertexBufferHandle vbh, BufferDataHandle bdh) {
   auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
   auto bd = handleAllocator.cast<GLBufferData*>(bdh);
+  ENJAM_ASSERT(bd->target == GL_ARRAY_BUFFER);
   vb->bufferId = bd->id;
 }
 
@@ -160,16 +205,18 @@ IndexBufferHandle RendererBackendOpengl::createIndexBuffer(uint32_t size) {
   return ibh;
 }
 
-BufferDataHandle RendererBackendOpengl::createBufferData(uint32_t size) {
+BufferDataHandle RendererBackendOpengl::createBufferData(uint32_t size, BufferTargetBinding bufferBinding) {
   auto bdh = handleAllocator.allocAndConstruct<GLBufferData>();
   auto bd = handleAllocator.cast<GLBufferData*>(bdh);
 
+  auto target = OpenGL::toBufferBinding(bufferBinding);
   glGenBuffers(1, &bd->id);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bd->id);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, GL_STATIC_DRAW);
+  glBindBuffer(target, bd->id);
+  glBufferData(target, size, nullptr, GL_STATIC_DRAW);
   GL_CHECK_ERRORS();
 
   bd->size = size;
+  bd->target = target;
   return bdh;
 }
 
@@ -196,9 +243,9 @@ void RendererBackendOpengl::updateBufferData(BufferDataHandle bdh, BufferDataDes
 
   ENJAM_ASSERT(offset + bd->size <= bd->size)
 
-  auto binding = GL_ARRAY_BUFFER;
-  glBindBuffer(binding, bd->id);
-  glBufferSubData(binding, offset, dataDesc.size, dataDesc.data);
+  auto target = bd->target;
+  glBindBuffer(target, bd->id);
+  glBufferSubData(target, offset, dataDesc.size, dataDesc.data);
   GL_CHECK_ERRORS();
 
   dataDesc.onConsumed(dataDesc.data, dataDesc.size);
@@ -236,11 +283,25 @@ void RendererBackendOpengl::updateVertexArray(const VertexArrayDesc& vertexArray
 }
 
 void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, IndexBufferHandle ibh, uint32_t count) {
-  auto p = handleAllocator.cast<GLProgram*>(ph);
+  auto program = handleAllocator.cast<GLProgram*>(ph);
   auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
   auto ib = handleAllocator.cast<GLIndexBuffer*>(ibh);
 
-  glUseProgram(p->id);
+  if(boundDescriptorSetHandle) {
+    auto ds = handleAllocator.cast<GLDescriptorSet*>(boundDescriptorSetHandle);
+    auto& descriptors = ds->descriptors;
+    for (auto binding = 0; binding < descriptors.size(); ++binding) {
+      auto& d = descriptors[binding];
+
+      std::visit(overloaded {
+          [](GLDescriptorNone& arg) { },
+          [&binding](GLDescriptorBuffer& arg) { arg.bind(binding); },
+          [](GLDescriptorTexture& arg) { ENJAM_ASSERT("Binding texture is not implemented yet."); }
+      }, d);
+    }
+  }
+
+  glUseProgram(program->id);
 
   glBindVertexArray(defaultVertexArray);
 

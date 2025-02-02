@@ -10,6 +10,13 @@ constexpr inline GLboolean toGLBoolean(bool value) {
   return value ? GL_TRUE : GL_FALSE;
 }
 
+constexpr inline GLenum toBufferBinding(BufferTargetBinding type) {
+  switch (type) {
+    case BufferTargetBinding::UNIFORM: return GL_UNIFORM_BUFFER;
+    case BufferTargetBinding::VERTEX: return GL_ARRAY_BUFFER;
+  }
+}
+
 constexpr inline GLint toGLVertexAttribSize(VertexAttributeType type) {
   using Type = VertexAttributeType;
   switch (type) {

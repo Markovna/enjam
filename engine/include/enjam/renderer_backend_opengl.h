@@ -36,11 +36,55 @@ struct GLIndexBuffer : public IndexBuffer {
 struct GLBufferData : public BufferData {
   GLuint id = 0;
   uint32_t size = 0;
+  GLenum target = 0; // GL_UNIFORM_BUFFER / GL_ARRAY_BUFFER
+};
+
+struct GLDescriptorBuffer {
+  GLuint id = 0;
+  uint32_t size = 0;
+  uint32_t offset = 0;
+
+  void bind(uint8_t binding) const;
+};
+
+struct GLDescriptorTexture {
+  // TODO
+};
+
+struct GLDescriptorNone { };
+
+using GLDescriptor = std::variant<GLDescriptorNone, GLDescriptorBuffer, GLDescriptorTexture>;
+
+struct GLDescriptorSet : public DescriptorSet {
+  explicit GLDescriptorSet(DescriptorSetData&& data) noexcept {
+    std::sort(data.bindings.begin(), data.bindings.end(), [](auto&& lhs, auto&& rhs) {
+      return lhs.binding < rhs.binding;
+    });
+
+    size_t descriptorsCount = data.bindings.back().binding + 1;
+    descriptors.resize(descriptorsCount, GLDescriptorNone { });
+
+    for (auto& desc : data.bindings) {
+      switch(desc.type) {
+        case DescriptorType::UNIFORM_BUFFER: {
+          descriptors[desc.binding] = GLDescriptorBuffer { };
+          break;
+        }
+        case DescriptorType::TEXTURE: {
+          descriptors[desc.binding] = GLDescriptorTexture { };
+          break;
+        }
+      }
+    }
+  }
+
+  using DescriptorsArray = std::vector<GLDescriptor>;
+  DescriptorsArray descriptors;
 };
 
 class RendererBackendOpengl : public RendererBackend {
  public:
-  using HandleAllocator = HandleAllocator<GLVertexBuffer, GLIndexBuffer, GLProgram, GLBufferData>;
+  using HandleAllocator = HandleAllocator<GLVertexBuffer, GLIndexBuffer, GLProgram, GLBufferData, GLDescriptorSet>;
 
   explicit RendererBackendOpengl(GLLoaderProc, GLSwapChain);
 
@@ -55,6 +99,11 @@ class RendererBackendOpengl : public RendererBackend {
   ProgramHandle createProgram(ProgramData&) override;
   void destroyProgram(ProgramHandle) override;
 
+  DescriptorSetHandle createDescriptorSet(DescriptorSetData&&) override;
+  void destroyDescriptorSet(DescriptorSetHandle) override;
+  void updateDescriptorSetBuffer(DescriptorSetHandle dsh, uint8_t binding, BufferDataHandle bdh, uint32_t size, uint32_t offset) override;
+  void bindDescriptorSet(DescriptorSetHandle dsh) override;
+
   VertexBufferHandle createVertexBuffer(VertexArrayDesc) override;
   void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) override;
   void destroyVertexBuffer(VertexBufferHandle) override;
@@ -63,7 +112,7 @@ class RendererBackendOpengl : public RendererBackend {
   void updateIndexBuffer(IndexBufferHandle, BufferDataDesc&&, uint32_t offset) override;
   void destroyIndexBuffer(IndexBufferHandle) override;
 
-  BufferDataHandle createBufferData(uint32_t size) override;
+  BufferDataHandle createBufferData(uint32_t size, BufferTargetBinding) override;
   void updateBufferData(BufferDataHandle, BufferDataDesc&&, uint32_t offset) override;
   void destroyBufferData(BufferDataHandle) override;
 
@@ -75,6 +124,7 @@ class RendererBackendOpengl : public RendererBackend {
   GLSwapChain swapChain;
   HandleAllocator handleAllocator;
   GLuint defaultVertexArray;
+  DescriptorSetHandle boundDescriptorSetHandle;
 };
 
 }

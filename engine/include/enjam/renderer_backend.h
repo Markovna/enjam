@@ -3,6 +3,7 @@
 
 #include <enjam/defines.h>
 #include <array>
+#include <vector>
 #include <cstdint>
 #include <functional>
 #include <utility>
@@ -85,14 +86,36 @@ enum class VertexAttributeType : uint8_t {
   UINT4
 };
 
+enum class BufferTargetBinding : uint8_t {
+  VERTEX,
+  UNIFORM
+};
+
+enum class DescriptorType : uint8_t {
+  UNIFORM_BUFFER,
+  TEXTURE
+};
+
+struct DescriptorSetBinding {
+  uint8_t binding;
+  DescriptorType type;
+};
+
+struct DescriptorSetData {
+  using BindingsArray = std::vector<DescriptorSetBinding>;
+  BindingsArray bindings;
+};
+
 struct VertexBuffer {};
 struct IndexBuffer {};
 struct Program {};
+struct DescriptorSet {};
 struct BufferData {};
 
 using VertexBufferHandle = Handle<VertexBuffer>;
 using IndexBufferHandle = Handle<IndexBuffer>;
 using ProgramHandle = Handle<Program>;
+using DescriptorSetHandle = Handle<DescriptorSet>;
 using BufferDataHandle = Handle<BufferData>;
 
 struct VertexAttribute {
@@ -160,6 +183,11 @@ class ENJAM_API RendererBackend {
   virtual ProgramHandle createProgram(ProgramData&) = 0;
   virtual void destroyProgram(ProgramHandle) = 0;
 
+  virtual DescriptorSetHandle createDescriptorSet(DescriptorSetData&&) = 0;
+  virtual void destroyDescriptorSet(DescriptorSetHandle) = 0;
+  virtual void updateDescriptorSetBuffer(DescriptorSetHandle dsh, uint8_t binding, BufferDataHandle bdh, uint32_t size, uint32_t offset) = 0;
+  virtual void bindDescriptorSet(DescriptorSetHandle dsh) = 0;
+
   virtual VertexBufferHandle createVertexBuffer(VertexArrayDesc) = 0;
   virtual void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) = 0;
   virtual void destroyVertexBuffer(VertexBufferHandle) = 0;
@@ -168,7 +196,7 @@ class ENJAM_API RendererBackend {
   virtual void updateIndexBuffer(IndexBufferHandle, BufferDataDesc&&, uint32_t offset) = 0;
   virtual void destroyIndexBuffer(IndexBufferHandle) = 0;
 
-  virtual BufferDataHandle createBufferData(uint32_t size) = 0;
+  virtual BufferDataHandle createBufferData(uint32_t size, BufferTargetBinding) = 0;
   virtual void updateBufferData(BufferDataHandle, BufferDataDesc&&, uint32_t offset) = 0;
   virtual void destroyBufferData(BufferDataHandle) = 0;
 };

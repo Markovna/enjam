@@ -4,6 +4,7 @@
 #include <enjam/defines.h>
 #include <enjam/platform.h>
 #include <enjam/renderer_backend_type.h>
+#include <enjam/math.h>
 
 namespace Enjam {
 
@@ -24,7 +25,11 @@ class ENJAM_API Renderer final {
 };
 
 class RenderView {
-
+ public:
+  math::mat4f projectionMatrix;
+  math::vec3f position;
+  math::vec3f front;
+  math::vec3f up;
 };
 
 }

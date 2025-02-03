@@ -235,7 +235,9 @@ void RendererBackendOpengl::updateIndexBuffer(IndexBufferHandle ibh, BufferDataD
   glBufferSubData(binding, offset, dataDesc.size, dataDesc.data);
   GL_CHECK_ERRORS();
 
-  dataDesc.onConsumed(dataDesc.data, dataDesc.size);
+  if(dataDesc.onConsumed) {
+    dataDesc.onConsumed(dataDesc.data, dataDesc.size);
+  }
 }
 
 void RendererBackendOpengl::updateBufferData(BufferDataHandle bdh, BufferDataDesc&& dataDesc, uint32_t offset) {
@@ -248,7 +250,9 @@ void RendererBackendOpengl::updateBufferData(BufferDataHandle bdh, BufferDataDes
   glBufferSubData(target, offset, dataDesc.size, dataDesc.data);
   GL_CHECK_ERRORS();
 
-  dataDesc.onConsumed(dataDesc.data, dataDesc.size);
+  if(dataDesc.onConsumed) {
+    dataDesc.onConsumed(dataDesc.data, dataDesc.size);
+  }
 }
 
 void RendererBackendOpengl::destroyBufferData(BufferDataHandle bdh) {

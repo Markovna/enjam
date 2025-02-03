@@ -11,7 +11,7 @@
 
 namespace Enjam {
 
-static void bindKeys(Input& input, bool& isRunning, const std::string& exePath);
+static void bindKeys(Input& input, RenderView&, bool& isRunning, const std::string& exePath);
 
 void Test(int argc, char* argv[]) {
   std::string exePath = argv[0];
@@ -25,13 +25,18 @@ void Test(int argc, char* argv[]) {
 
   bool isRunning = true;
 
-  bindKeys(input, isRunning, exePath);
+  RenderView renderView { };
+  renderView.projectionMatrix = math::mat4f::perspective(60, 1.4, 0.1, 10);
+  renderView.position = math::vec3f { 0, 0, -1 };
+  renderView.front = math::vec3f { 0, 0, 1 };
+  renderView.up = math::vec3f { 0, 1, 0 };
+
+  bindKeys(input, renderView, isRunning, exePath);
 
   while(isRunning) {
     platform.pollInputEvents();
     input.update();
 
-    RenderView renderView { };
     renderer.draw(renderView);
   }
 
@@ -60,7 +65,7 @@ static void loadLib(LibraryLoader& libLoader, const std::string& libPath, const 
   funcPtr();
 }
 
-void bindKeys(Input& input, bool& isRunning, const std::string& exePath) {
+void bindKeys(Input& input, RenderView& renderView, bool& isRunning, const std::string& exePath) {
   static std::string libPath { exePath, 0, exePath.find_last_of('/') };
 
   ENJAM_INFO("{}", libPath);
@@ -69,6 +74,24 @@ void bindKeys(Input& input, bool& isRunning, const std::string& exePath) {
 
   input.onKeyPress().add([&](auto args) {
     ENJAM_INFO("Key Press event called: {} {}", (uint16_t) args.keyCode, args.alt);
+
+
+    if(args.keyCode == KeyCode::Left) {
+      renderView.position += math::vec3f {0.1, 0, 0};
+    }
+
+    if(args.keyCode == KeyCode::Right) {
+      renderView.position += math::vec3f {-0.1, 0, 0};
+    }
+
+
+    if(args.keyCode == KeyCode::Up) {
+      renderView.position += math::vec3f {0, 0, 0.1};
+    }
+
+    if(args.keyCode == KeyCode::Down) {
+      renderView.position += math::vec3f {0, 0, -0.1};
+    }
 
     if(args.keyCode == KeyCode::R && args.super) {
       loadLib(libLoader, libPath, "game");

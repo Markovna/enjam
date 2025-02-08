@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <glad/glad.h>
 
-namespace Enjam {
+namespace Enjam::renderer {
 
 typedef void* (*GLLoaderProc)(const char *name);
 
@@ -51,27 +51,27 @@ struct GLDescriptorTexture {
   // TODO
 };
 
-struct GLDescriptorNone { };
+struct GLDescriptorNone {};
 
 using GLDescriptor = std::variant<GLDescriptorNone, GLDescriptorBuffer, GLDescriptorTexture>;
 
 struct GLDescriptorSet : public DescriptorSet {
-  explicit GLDescriptorSet(DescriptorSetData&& data) noexcept {
-    std::sort(data.bindings.begin(), data.bindings.end(), [](auto&& lhs, auto&& rhs) {
+  explicit GLDescriptorSet(DescriptorSetData &&data) noexcept {
+    std::sort(data.bindings.begin(), data.bindings.end(), [](auto &&lhs, auto &&rhs) {
       return lhs.binding < rhs.binding;
     });
 
     size_t descriptorsCount = data.bindings.back().binding + 1;
-    descriptors.resize(descriptorsCount, GLDescriptorNone { });
+    descriptors.resize(descriptorsCount, GLDescriptorNone{});
 
-    for (auto& desc : data.bindings) {
-      switch(desc.type) {
+    for (auto &desc: data.bindings) {
+      switch (desc.type) {
         case DescriptorType::UNIFORM_BUFFER: {
-          descriptors[desc.binding] = GLDescriptorBuffer { };
+          descriptors[desc.binding] = GLDescriptorBuffer{};
           break;
         }
         case DescriptorType::TEXTURE: {
-          descriptors[desc.binding] = GLDescriptorTexture { };
+          descriptors[desc.binding] = GLDescriptorTexture{};
           break;
         }
       }
@@ -94,7 +94,7 @@ class RendererBackendOpengl : public RendererBackend {
   void beginFrame() override;
   void endFrame() override;
 
-  void draw(ProgramHandle, VertexBufferHandle, IndexBufferHandle, uint32_t count) override;
+  void draw(ProgramHandle, VertexBufferHandle, IndexBufferHandle, uint32_t indexCount, uint32_t indexOffset) override;
 
   ProgramHandle createProgram(ProgramData&) override;
   void destroyProgram(ProgramHandle) override;
@@ -108,12 +108,12 @@ class RendererBackendOpengl : public RendererBackend {
   void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) override;
   void destroyVertexBuffer(VertexBufferHandle) override;
 
-  IndexBufferHandle createIndexBuffer(uint32_t size) override;
-  void updateIndexBuffer(IndexBufferHandle, BufferDataDesc&&, uint32_t offset) override;
+  IndexBufferHandle createIndexBuffer(uint32_t byteSize) override;
+  void updateIndexBuffer(IndexBufferHandle, BufferDataDesc&&, uint32_t byteOffset) override;
   void destroyIndexBuffer(IndexBufferHandle) override;
 
   BufferDataHandle createBufferData(uint32_t size, BufferTargetBinding) override;
-  void updateBufferData(BufferDataHandle, BufferDataDesc&&, uint32_t offset) override;
+  void updateBufferData(BufferDataHandle, BufferDataDesc&&, uint32_t byteOffset) override;
   void destroyBufferData(BufferDataHandle) override;
 
  private:

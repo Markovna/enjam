@@ -1,61 +1,16 @@
 #include <enjam/renderer.h>
 #include <enjam/renderer_backend.h>
 #include <enjam/assert.h>
-#include <enjam/platform.h>
 #include <enjam/math.h>
+#include <enjam/render_view.h>
+#include <fstream>
+#include <sstream>
 
 namespace Enjam {
 
-Renderer::Renderer(Platform& platform)
-    : platform(platform) {
+Renderer::Renderer(RendererBackend& backend)
+    : rendererBackend(backend) {
 }
-
-struct Triangle {
-  VertexBufferHandle vbh;
-  IndexBufferHandle ibh;
-  BufferDataHandle bdh;
-
-  static Triangle create(RendererBackend& backend) {
-    auto vbh = backend.createVertexBuffer(
-        VertexArrayDesc{
-            .attributes = {
-                VertexAttribute{
-                    .type = VertexAttributeType::FLOAT3,
-                    .flags = VertexAttribute::FLAG_ENABLED,
-                    .offset = 0
-                }
-            },
-            .stride = 3 * sizeof(float)
-        }
-    );
-
-    auto ibh = backend.createIndexBuffer(3 * sizeof(uint32_t));
-    auto bdh = backend.createBufferData(9 * sizeof(float), BufferTargetBinding::VERTEX);
-
-    auto vertexBuf = new float[] {
-        -0.5f, 0.5f, 0.0f,
-         0.0f, -0.5f, 0.0f,
-         0.5f, 0.5f, 0.0f
-    };
-
-    auto vertexBufConsumedCallback = [](void* p, uint32_t size) { delete [] static_cast<float*>(p); };
-    auto vertexBufDataDesc = BufferDataDesc(vertexBuf, 9 * sizeof(float), vertexBufConsumedCallback);
-    backend.updateBufferData(bdh, std::move(vertexBufDataDesc), 0);
-    backend.assignVertexBufferData(vbh, bdh);
-
-    auto indexBuf = new uint32_t [] {0, 1, 2};
-
-    auto indexBufConsumedCallback = [](void* p, uint32_t size) { delete [] static_cast<uint32_t*>(p); };
-    auto indexBufDataDesc = BufferDataDesc(indexBuf, 3 * sizeof(uint32_t), indexBufConsumedCallback);
-    backend.updateIndexBuffer(ibh, std::move(indexBufDataDesc), 0);
-
-    return Triangle {
-        .vbh = vbh,
-        .ibh = ibh,
-        .bdh = bdh
-    };
-  }
-};
 
 struct PerViewUniforms {
   std140::mat44 projection;
@@ -63,74 +18,63 @@ struct PerViewUniforms {
 };
 
 struct DrawData {
-  Triangle triangle;
-  ProgramHandle programHandle;
-  DescriptorSetHandle viewDescriptorSetHandle;
-  BufferDataHandle viewUniformBufferHandle;
-  PerViewUniforms perViewUniformBufferData;
+  renderer::ProgramHandle programHandle;
+  renderer::DescriptorSetHandle viewDescriptorSetHandle;
+  renderer::BufferDataHandle viewUniformBufferHandle;
+  PerViewUniforms perViewUniformBufferData {};
 };
 
 static DrawData drawData;
 
-const char *vertexShaderSource = "#version 410 core\n"
-                                 "layout (location = 0) in vec3 aPos;\n"
-                                 "layout (std140) uniform perView\n"
-                                 "{\n"
-                                 "   mat4 projection;\n"
-                                 "   mat4 view;\n"
-                                 "};\n"
-                                 "void main()\n"
-                                 "{\n"
-                                 "   gl_Position = projection * view * vec4(aPos, 1.0);\n"
-                                 "}\0";
-const char *fragmentShaderSource = "#version 410 core\n"
-                                   "out vec4 FragColor;\n"
-                                   "void main()\n"
-                                   "{\n"
-                                   "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-                                   "}\n\0";
-
-void Renderer::init(RendererBackendType backendType) {
-  rendererBackend = platform.createRendererBackend(backendType);
-  ENJAM_ASSERT(rendererBackend != nullptr && "Failed to create renderer backend.");
-
-  bool initialized = rendererBackend->init();
+void Renderer::init() {
+  bool initialized = rendererBackend.init();
   ENJAM_ASSERT(initialized && "Failed to initialize renderer backend.");
 
+  std::ifstream vertexShaderFile("shaders/vertex.glsl");
+  std::stringstream vertexShaderStrBuffer;
+  vertexShaderStrBuffer << vertexShaderFile.rdbuf();
+
+  std::ifstream fragmentShaderFile("shaders/fragment.glsl");
+  std::stringstream fragmentShaderStrBuffer;
+  fragmentShaderStrBuffer << fragmentShaderFile.rdbuf();
+
   ProgramData program { };
-  program.setShader(ShaderStage::VERTEX, vertexShaderSource)
-        .setShader(ShaderStage::FRAGMENT, fragmentShaderSource)
+  program.setShader(ShaderStage::VERTEX, vertexShaderStrBuffer.str().c_str())
+        .setShader(ShaderStage::FRAGMENT, fragmentShaderStrBuffer.str().c_str())
         .setDescriptorBinding("perView", 0);
 
-  drawData.programHandle = rendererBackend->createProgram(program);
-  drawData.viewDescriptorSetHandle = rendererBackend->createDescriptorSet(DescriptorSetData {
-    .bindings { { .binding = 0, .type = DescriptorType::UNIFORM_BUFFER } }
+  drawData.programHandle = rendererBackend.createProgram(program);
+  drawData.viewDescriptorSetHandle = rendererBackend.createDescriptorSet(renderer::DescriptorSetData {
+    .bindings {
+      { .binding = 0, .type = renderer::DescriptorType::UNIFORM_BUFFER }
+    }
   });
 
-  drawData.viewUniformBufferHandle = rendererBackend->createBufferData(sizeof(PerViewUniforms), BufferTargetBinding::UNIFORM);
-  rendererBackend->updateDescriptorSetBuffer(drawData.viewDescriptorSetHandle, 0, drawData.viewUniformBufferHandle, sizeof(PerViewUniforms), 0);
-
-  drawData.triangle = Triangle::create(*rendererBackend);
+  drawData.viewUniformBufferHandle = rendererBackend.createBufferData(sizeof(PerViewUniforms), renderer::BufferTargetBinding::UNIFORM);
+  rendererBackend.updateDescriptorSetBuffer(drawData.viewDescriptorSetHandle, 0, drawData.viewUniformBufferHandle, sizeof(PerViewUniforms), 0);
 }
 
 void Renderer::shutdown() {
-  rendererBackend->destroyProgram(drawData.programHandle);
-  rendererBackend->shutdown();
-  delete rendererBackend;
+  rendererBackend.destroyDescriptorSet(drawData.viewDescriptorSetHandle);
+  rendererBackend.destroyBufferData(drawData.viewUniformBufferHandle);
+  rendererBackend.destroyProgram(drawData.programHandle);
+  rendererBackend.shutdown();
 }
 
 void Renderer::draw(RenderView& renderView) {
-  drawData.perViewUniformBufferData.projection = renderView.projectionMatrix;
-  drawData.perViewUniformBufferData.view = math::mat4f::lookAt(renderView.position, renderView.position + renderView.front, renderView.up);
+  drawData.perViewUniformBufferData.projection = renderView.camera.projectionMatrix;
+  drawData.perViewUniformBufferData.view = math::mat4f::lookAt(renderView.camera.position, renderView.camera.position + renderView.camera.front, renderView.camera.up);
 
-  rendererBackend->beginFrame();
+  rendererBackend.beginFrame();
+  rendererBackend.updateBufferData(drawData.viewUniformBufferHandle, renderer::BufferDataDesc { &drawData.perViewUniformBufferData, sizeof(drawData.perViewUniformBufferData) }, 0);
 
-  rendererBackend->bindDescriptorSet(drawData.viewDescriptorSetHandle);
+  rendererBackend.bindDescriptorSet(drawData.viewDescriptorSetHandle);
 
-  rendererBackend->updateBufferData(drawData.viewUniformBufferHandle, BufferDataDesc { &drawData.perViewUniformBufferData, sizeof(drawData.perViewUniformBufferData) }, 0);
-  rendererBackend->draw(drawData.programHandle, drawData.triangle.vbh, drawData.triangle.ibh, 3);
+  for(auto& primitive : renderView.scene.primitives) {
+    rendererBackend.draw(drawData.programHandle, primitive.getVertexBuffer().getHandle(), primitive.getIndexBuffer().getHandle(), 3, 0);
+  }
 
-  rendererBackend->endFrame();
+  rendererBackend.endFrame();
 }
 
 }

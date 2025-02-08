@@ -2,34 +2,35 @@
 #define INCLUDE_ENJAM_RENDERER_H_
 
 #include <enjam/defines.h>
+#include <enjam/assert.h>
 #include <enjam/platform.h>
 #include <enjam/renderer_backend_type.h>
 #include <enjam/math.h>
+#include <enjam/render_primitive.h>
+#include <vector>
 
 namespace Enjam {
 
 class RenderView;
+
+namespace renderer {
+
 class RendererBackend;
+
+}
 
 class ENJAM_API Renderer final {
  public:
-  explicit Renderer(Platform& platform);
+  using RendererBackend = renderer::RendererBackend;
+
+  explicit Renderer(RendererBackend& backend);
   ~Renderer() = default;
-  void init(RendererBackendType = DEFAULT);
+  void init();
   void draw(RenderView&);
   void shutdown();
 
  private:
-  Platform& platform;
-  RendererBackend* rendererBackend;
-};
-
-class RenderView {
- public:
-  math::mat4f projectionMatrix;
-  math::vec3f position;
-  math::vec3f front;
-  math::vec3f up;
+  RendererBackend& rendererBackend;
 };
 
 }

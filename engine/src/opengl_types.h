@@ -4,7 +4,7 @@
 #include <enjam/renderer_backend.h>
 #include <glad/glad.h>
 
-namespace Enjam::OpenGL {
+namespace Enjam::renderer::OpenGL {
 
 constexpr inline GLboolean toGLBoolean(bool value) {
   return value ? GL_TRUE : GL_FALSE;
@@ -59,6 +59,13 @@ constexpr inline GLint toGLVertexAttribSize(VertexAttributeType type) {
 
   ENJAM_ASSERT(false && "Unknown vertex attribute type");
   return GL_NONE;
+}
+
+constexpr inline uint32_t indexOffsetToByteOffset(uint32_t indexOffset) {
+  // Size in bytes of indices in the index buffer
+  // Assuming that index buffer contains uint32 values
+  uint8_t const indicesShift = 2;
+  return indexOffset << indicesShift;
 }
 
 constexpr inline GLenum toGLVertexAttribType(VertexAttributeType type) {

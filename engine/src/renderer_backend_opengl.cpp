@@ -7,7 +7,7 @@
 
 #include "opengl_types.h"
 
-namespace Enjam {
+namespace Enjam::renderer {
 
 #define GL_API_DEBUG 1
 
@@ -228,11 +228,11 @@ void RendererBackendOpengl::destroyIndexBuffer(IndexBufferHandle ibh) {
   handleAllocator.dealloc(ibh, ib);
 }
 
-void RendererBackendOpengl::updateIndexBuffer(IndexBufferHandle ibh, BufferDataDesc&& dataDesc, uint32_t offset) {
+void RendererBackendOpengl::updateIndexBuffer(IndexBufferHandle ibh, BufferDataDesc&& dataDesc, uint32_t byteOffset) {
   auto ib = handleAllocator.cast<GLIndexBuffer*>(ibh);
   auto binding = GL_ELEMENT_ARRAY_BUFFER;
   glBindBuffer(binding, ib->id);
-  glBufferSubData(binding, offset, dataDesc.size, dataDesc.data);
+  glBufferSubData(binding, byteOffset, dataDesc.size, dataDesc.data);
   GL_CHECK_ERRORS();
 
   if(dataDesc.onConsumed) {
@@ -240,14 +240,14 @@ void RendererBackendOpengl::updateIndexBuffer(IndexBufferHandle ibh, BufferDataD
   }
 }
 
-void RendererBackendOpengl::updateBufferData(BufferDataHandle bdh, BufferDataDesc&& dataDesc, uint32_t offset) {
+void RendererBackendOpengl::updateBufferData(BufferDataHandle bdh, BufferDataDesc&& dataDesc, uint32_t byteOffset) {
   auto bd = handleAllocator.cast<GLBufferData*>(bdh);
 
-  ENJAM_ASSERT(offset + bd->size <= bd->size)
+  ENJAM_ASSERT(byteOffset + bd->size <= bd->size)
 
   auto target = bd->target;
   glBindBuffer(target, bd->id);
-  glBufferSubData(target, offset, dataDesc.size, dataDesc.data);
+  glBufferSubData(target, byteOffset, dataDesc.size, dataDesc.data);
   GL_CHECK_ERRORS();
 
   if(dataDesc.onConsumed) {
@@ -286,7 +286,7 @@ void RendererBackendOpengl::updateVertexArray(const VertexArrayDesc& vertexArray
 
 }
 
-void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, IndexBufferHandle ibh, uint32_t count) {
+void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, IndexBufferHandle ibh, uint32_t indexCount, uint32_t indexOffset) {
   auto program = handleAllocator.cast<GLProgram*>(ph);
   auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
   auto ib = handleAllocator.cast<GLIndexBuffer*>(ibh);
@@ -313,7 +313,8 @@ void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, Index
   updateVertexArray(vb->vertexArray);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->id);
-  glDrawElements(GL_TRIANGLES, (GLsizei) count, GL_UNSIGNED_INT, nullptr);
+  void* pointer = (void*) (uintptr_t) (OpenGL::indexOffsetToByteOffset(indexOffset));
+  glDrawElements(GL_TRIANGLES, (GLsizei) indexCount, GL_UNSIGNED_INT, pointer);
   GL_CHECK_ERRORS();
 }
 

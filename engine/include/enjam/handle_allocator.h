@@ -6,7 +6,49 @@
 
 namespace Enjam {
 
-template<class T> class Handle;
+template<typename T>
+class Handle {
+ public:
+  using HandleId = uint32_t;
+  static constexpr HandleId invalidId = HandleId { UINT32_MAX };
+
+  Handle() noexcept = default;
+
+  Handle(const Handle&) noexcept = default;
+  Handle& operator=(const Handle&) noexcept = default;
+
+  Handle(Handle&& rhs) noexcept
+      : id(rhs.id) {
+    rhs.id = invalidId;
+  }
+
+  explicit Handle(HandleId id) noexcept : id(id) { }
+
+  Handle& operator=(Handle&& rhs) noexcept {
+    if(this != &rhs) {
+      id = rhs.id;
+      rhs.id = invalidId;
+    }
+    return *this;
+  }
+
+  bool operator ==(Handle other) const noexcept { return id == other.id; }
+  bool operator !=(Handle other) const noexcept { return id != other.id; }
+
+  explicit constexpr operator bool() const noexcept {return id != invalidId; }
+
+  template<typename D, typename = std::enable_if_t<std::is_base_of<T, D>::value> >
+  Handle(const Handle<D>& derived) noexcept : Handle(derived.id) { }
+
+  HandleId getId() const noexcept { return id; }
+
+ private:
+
+  template<class U> friend class Handle;
+
+ private:
+  HandleId id = invalidId;
+};
 
 template<class ...TYPES>
 class HandleAllocator final {

@@ -1,11 +1,15 @@
 #ifndef INCLUDE_ENJAM_RENDERER_BACKEND_TYPE_H_
 #define INCLUDE_ENJAM_RENDERER_BACKEND_TYPE_H_
 
+namespace Enjam {
+
 enum RendererBackendType {
   DEFAULT,
   OPENGL,
   VULKAN,
   DIRECTX
 };
+
+}
 
 #endif //INCLUDE_ENJAM_RENDERER_BACKEND_TYPE_H_

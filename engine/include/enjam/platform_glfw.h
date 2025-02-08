@@ -11,13 +11,18 @@ namespace Enjam {
 using Platform = class PlatformGlfw;
 
 class Input;
+
+namespace renderer {
+
 class RendererBackend;
+
+}
 
 class ENJAM_API PlatformGlfw {
  public:
   explicit PlatformGlfw(Input& input);
   void init();
-  RendererBackend* createRendererBackend(RendererBackendType);
+  renderer::RendererBackend* createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT);
   void pollInputEvents();
   void shutdown();
 

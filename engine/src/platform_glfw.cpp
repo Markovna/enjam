@@ -13,17 +13,17 @@ PlatformGlfw::PlatformGlfw(Input& input)
 
 }
 
-RendererBackend* PlatformGlfw::createRendererBackend(RendererBackendType type) {
+renderer::RendererBackend* PlatformGlfw::createRendererBackend(RendererBackendType type) {
   ENJAM_ASSERT(window);
 
   switch (type) {
     case DEFAULT:
     case OPENGL: {
-      GLSwapChain swapChain {
+      renderer::GLSwapChain swapChain {
           .makeCurrent = [win = window]() { glfwMakeContextCurrent(win); },
           .swapBuffers = [win = window]() { glfwSwapBuffers(win); }
       };
-      return new RendererBackendOpengl((GLLoaderProc) glfwGetProcAddress, swapChain);
+      return new renderer::RendererBackendOpengl((renderer::GLLoaderProc) glfwGetProcAddress, swapChain);
     }
     case VULKAN:
       ENJAM_ERROR("VULKAN renderer backend is not supported for current platform.");

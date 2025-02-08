@@ -2,6 +2,7 @@
 #define INCLUDE_ENJAM_RENDERER_BACKEND_H_
 
 #include <enjam/defines.h>
+#include <enjam/handle_allocator.h>
 #include <array>
 #include <vector>
 #include <cstdint>
@@ -9,51 +10,7 @@
 #include <utility>
 #include "program.h"
 
-namespace Enjam {
-
-template<typename T>
-class Handle {
- public:
-  using HandleId = uint32_t;
-  static constexpr HandleId invalidId = HandleId { UINT32_MAX };
-
-  Handle() noexcept = default;
-
-  Handle(const Handle&) noexcept = default;
-  Handle& operator=(const Handle&) noexcept = default;
-
-  Handle(Handle&& rhs) noexcept
-    : id(rhs.id) {
-    rhs.id = invalidId;
-  }
-
-  explicit Handle(HandleId id) noexcept : id(id) { }
-
-  Handle& operator=(Handle&& rhs) noexcept {
-    if(this != &rhs) {
-      id = rhs.id;
-      rhs.id = invalidId;
-    }
-    return *this;
-  }
-
-  bool operator ==(Handle other) const noexcept { return id == other.id; }
-  bool operator !=(Handle other) const noexcept { return id != other.id; }
-
-  explicit constexpr operator bool() const noexcept {return id != invalidId; }
-
-  template<typename D, typename = std::enable_if_t<std::is_base_of<T, D>::value> >
-  Handle(const Handle<D>& derived) noexcept : Handle(derived.id) { }
-
-  HandleId getId() const noexcept { return id; }
-
- private:
-
-  template<class U> friend class Handle;
-
- private:
-  HandleId id = invalidId;
-};
+namespace Enjam::renderer {
 
 enum class VertexAttributeType : uint8_t {
   FLOAT,
@@ -178,7 +135,7 @@ class ENJAM_API RendererBackend {
   virtual void beginFrame() = 0;
   virtual void endFrame() = 0;
 
-  virtual void draw(ProgramHandle, VertexBufferHandle, IndexBufferHandle, uint32_t count) = 0;
+  virtual void draw(ProgramHandle, VertexBufferHandle, IndexBufferHandle, uint32_t indexCount, uint32_t indexOffset) = 0;
 
   virtual ProgramHandle createProgram(ProgramData&) = 0;
   virtual void destroyProgram(ProgramHandle) = 0;
@@ -192,12 +149,12 @@ class ENJAM_API RendererBackend {
   virtual void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) = 0;
   virtual void destroyVertexBuffer(VertexBufferHandle) = 0;
 
-  virtual IndexBufferHandle createIndexBuffer(uint32_t size) = 0;
-  virtual void updateIndexBuffer(IndexBufferHandle, BufferDataDesc&&, uint32_t offset) = 0;
+  virtual IndexBufferHandle createIndexBuffer(uint32_t byteSize) = 0;
+  virtual void updateIndexBuffer(IndexBufferHandle, BufferDataDesc&&, uint32_t byteOffset) = 0;
   virtual void destroyIndexBuffer(IndexBufferHandle) = 0;
 
   virtual BufferDataHandle createBufferData(uint32_t size, BufferTargetBinding) = 0;
-  virtual void updateBufferData(BufferDataHandle, BufferDataDesc&&, uint32_t offset) = 0;
+  virtual void updateBufferData(BufferDataHandle, BufferDataDesc&&, uint32_t byteOffset) = 0;
   virtual void destroyBufferData(BufferDataHandle) = 0;
 };
 

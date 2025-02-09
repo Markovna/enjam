@@ -8,7 +8,7 @@ set(ENJAM_SOURCES
         src/library_loader.cpp
         src/renderer.cpp
         src/renderer_backend_opengl.cpp
-        src/scene.cpp src/render_primitive.cpp)
+        src/render_primitive.cpp src/render_view.cpp)
 
 set(ENJAM_HEADERS
         include/enjam/assert.h

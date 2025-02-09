@@ -7,18 +7,79 @@
 #include <enjam/renderer.h>
 #include <enjam/render_view.h>
 #include <memory>
+#include <fstream>
+#include <sstream>
 
 namespace Enjam {
 
 static void bindKeys(Input& input, RenderView&, bool& isRunning, const std::string& exePath);
 RenderPrimitive createTriangle(renderer::RendererBackend& rendererBackend);
 
+struct AppData {
+  VertexBuffer* vertexBuffer;
+  IndexBuffer* indexBuffer;
+  ProgramData programData { };
+  Camera camera;
+};
+
+AppData createAppData(renderer::RendererBackend& rendererBackend) {
+  static const float vertexData[] {
+      -0.5f, 0.5f, 0.0f,
+      0.0f, -0.5f, 0.0f,
+      0.5f, 0.5f, 0.0f
+  };
+
+  static const uint32_t indexData[] { 0, 1, 2 };
+
+  AppData appData;
+  appData.vertexBuffer = new VertexBuffer(
+      rendererBackend,
+      renderer::VertexArrayDesc{
+          .attributes = {
+              renderer::VertexAttribute{
+                  .type = renderer::VertexAttributeType::FLOAT3,
+                  .flags = renderer::VertexAttribute::FLAG_ENABLED,
+                  .offset = 0
+              }
+          },
+          .stride = 3 * sizeof(float)
+      });
+  appData.vertexBuffer->setBuffer(
+      rendererBackend,
+      renderer::BufferDataDesc{(void *) vertexData, sizeof(vertexData)},
+      0);
+
+  appData.indexBuffer = new IndexBuffer(rendererBackend, 3);
+  appData.indexBuffer->setBuffer(rendererBackend, renderer::BufferDataDesc{(void *) indexData, sizeof(indexData)}, 0);
+
+  std::ifstream vertexShaderFile("shaders/vertex.glsl");
+  std::stringstream vertexShaderStrBuffer;
+  vertexShaderStrBuffer << vertexShaderFile.rdbuf();
+
+  std::ifstream fragmentShaderFile("shaders/fragment.glsl");
+  std::stringstream fragmentShaderStrBuffer;
+  fragmentShaderStrBuffer << fragmentShaderFile.rdbuf();
+
+  appData.programData.setShader(ShaderStage::VERTEX, vertexShaderStrBuffer.str().c_str())
+      .setShader(ShaderStage::FRAGMENT, fragmentShaderStrBuffer.str().c_str())
+      .setDescriptorBinding("perView", 0);
+
+  appData.camera = {
+    .projectionMatrix = math::mat4f::perspective(60, 1.4, 0.1, 10),
+    .position = math::vec3f { 0, 0, -1 },
+    .front = math::vec3f { 0, 0, 1 },
+    .up = math::vec3f { 0, 1, 0 }
+  };
+  return appData;
+}
+
+static AppData appData;
+
 void Test(int argc, char* argv[]) {
   std::string exePath = argv[0];
 
   auto input = Input { };
   auto platform = Platform { input };
-  platform.init();
 
   auto rendererBackend = platform.createRendererBackend();
   ENJAM_ASSERT(rendererBackend != nullptr && "Failed to create renderer backend.");
@@ -27,27 +88,23 @@ void Test(int argc, char* argv[]) {
   renderer.init();
 
   bool isRunning = true;
+  appData = createAppData(*rendererBackend);
 
-  RenderView renderView {
-    .camera = {
-        .projectionMatrix = math::mat4f::perspective(60, 1.4, 0.1, 10),
-        .position = math::vec3f { 0, 0, -1 },
-        .front = math::vec3f { 0, 0, 1 },
-        .up = math::vec3f { 0, 1, 0 }
-    }
-  };
+  auto renderView = new RenderView { *rendererBackend };
+  renderView->setCamera(&appData.camera);
+  renderView->setProgram(rendererBackend->createProgram(appData.programData));
+  renderView->getPrimitives().emplace_back(*appData.vertexBuffer, *appData.indexBuffer);
 
-  auto triangle = createTriangle(*rendererBackend);
-  renderView.scene.primitives.push_back(triangle);
-
-  bindKeys(input, renderView, isRunning, exePath);
+  bindKeys(input, *renderView, isRunning, exePath);
 
   while(isRunning) {
     platform.pollInputEvents();
     input.update();
 
-    renderer.draw(renderView);
+    renderer.draw(*renderView);
   }
+
+  delete renderView;
 
   renderer.shutdown();
   platform.shutdown();
@@ -74,38 +131,6 @@ static void loadLib(LibraryLoader& libLoader, const std::string& libPath, const 
   funcPtr();
 }
 
-RenderPrimitive createTriangle(renderer::RendererBackend& rendererBackend) {
-  static const float vertexData[] {
-      -0.5f, 0.5f, 0.0f,
-      0.0f, -0.5f, 0.0f,
-      0.5f, 0.5f, 0.0f
-  };
-
-  static const uint32_t indexData[] { 0, 1, 2 };
-
-  static VertexBuffer vertexBuffer = VertexBuffer(
-      rendererBackend,
-      renderer::VertexArrayDesc{
-          .attributes = {
-              renderer::VertexAttribute{
-                  .type = renderer::VertexAttributeType::FLOAT3,
-                  .flags = renderer::VertexAttribute::FLAG_ENABLED,
-                  .offset = 0
-              }
-          },
-          .stride = 3 * sizeof(float)
-      });
-  vertexBuffer.setBuffer(
-      rendererBackend,
-      renderer::BufferDataDesc { (void*) vertexData, sizeof(vertexData)},
-      0);
-
-  static IndexBuffer indexBuffer = IndexBuffer(rendererBackend, 3);
-  indexBuffer.setBuffer(rendererBackend, renderer::BufferDataDesc { (void*) indexData, sizeof(indexData) }, 0);
-
-  return { vertexBuffer, indexBuffer };
-}
-
 void bindKeys(Input& input, RenderView& renderView, bool& isRunning, const std::string& exePath) {
   static std::string libPath { exePath, 0, exePath.find_last_of('/') };
 
@@ -117,19 +142,19 @@ void bindKeys(Input& input, RenderView& renderView, bool& isRunning, const std::
     ENJAM_INFO("Key Press event called: {} {}", (uint16_t) args.keyCode, args.alt);
 
     if(args.keyCode == KeyCode::Left) {
-      renderView.camera.position += math::vec3f {0.1, 0, 0};
+      appData.camera.position += math::vec3f {0.1, 0, 0};
     }
 
     if(args.keyCode == KeyCode::Right) {
-      renderView.camera.position += math::vec3f {-0.1, 0, 0};
+      appData.camera.position += math::vec3f {-0.1, 0, 0};
     }
 
     if(args.keyCode == KeyCode::Up) {
-      renderView.camera.position += math::vec3f {0, 0, 0.1};
+      appData.camera.position += math::vec3f {0, 0, 0.1};
     }
 
     if(args.keyCode == KeyCode::Down) {
-      renderView.camera.position += math::vec3f {0, 0, -0.1};
+      appData.camera.position += math::vec3f {0, 0, -0.1};
     }
 
     if(args.keyCode == KeyCode::R && args.super) {

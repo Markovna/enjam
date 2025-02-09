@@ -21,12 +21,12 @@ class RendererBackend;
 class ENJAM_API PlatformGlfw {
  public:
   explicit PlatformGlfw(Input& input);
-  void init();
   renderer::RendererBackend* createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT);
   void pollInputEvents();
   void shutdown();
 
 private:
+  void init();
   void onKeyPress(int key, int scancode, int action, int mods);
   void onKeyRelease(int key, int scancode, int action, int mods);
 

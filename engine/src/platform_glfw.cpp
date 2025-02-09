@@ -10,7 +10,7 @@ namespace Enjam {
 PlatformGlfw::PlatformGlfw(Input& input)
   : input(input)
   , initialized(false) {
-
+  init();
 }
 
 renderer::RendererBackend* PlatformGlfw::createRendererBackend(RendererBackendType type) {

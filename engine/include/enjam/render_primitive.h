@@ -1,6 +1,7 @@
 #ifndef INCLUDE_ENJAM_RENDER_PRIMITIVE_H_
 #define INCLUDE_ENJAM_RENDER_PRIMITIVE_H_
 
+#include <enjam/math.h>
 #include <enjam/renderer_backend.h>
 
 namespace Enjam {
@@ -56,15 +57,19 @@ class BufferObject {
 class RenderPrimitive {
  public:
   RenderPrimitive(VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer)
-    : vertexBuffer(vertexBuffer), indexBuffer(indexBuffer)
+    : vertexBuffer(vertexBuffer), indexBuffer(indexBuffer), transform(1)
   { }
 
   VertexBuffer& getVertexBuffer() { return vertexBuffer; }
   IndexBuffer& getIndexBuffer() { return indexBuffer; }
+  const math::mat4f& getTransform() const { return transform; }
+
+  void setTransform(math::mat4f&& tr) { transform = std::move(tr); }
 
  private:
   VertexBuffer& vertexBuffer;
   IndexBuffer& indexBuffer;
+  math::mat4f transform;
 };
 
 }

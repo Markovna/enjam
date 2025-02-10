@@ -3,6 +3,7 @@
 #include <enjam/assert.h>
 #include <enjam/math.h>
 #include <enjam/render_view.h>
+#include <enjam/scene.h>
 
 namespace Enjam {
 
@@ -20,15 +21,18 @@ void Renderer::shutdown() {
 }
 
 void Renderer::draw(RenderView& renderView) {
-  renderView.perViewUniformBufferData.projection = renderView.camera->projectionMatrix;
-  renderView.perViewUniformBufferData.view = math::mat4f::lookAt(renderView.camera->position, renderView.camera->position + renderView.camera->front, renderView.camera->up);
-
   rendererBackend.beginFrame();
-  rendererBackend.updateBufferData(renderView.viewUniformBufferHandle, renderer::BufferDataDesc { &renderView.perViewUniformBufferData, sizeof(renderView.perViewUniformBufferData) }, 0);
+
+  renderView.updateViewUniformBuffer();
+  renderView.updateObjectsUniformBuffer();
 
   rendererBackend.bindDescriptorSet(renderView.viewDescriptorSetHandle);
 
-  for(auto& primitive : renderView.primitives) {
+  auto& primitives = renderView.scene->getPrimitives();
+  for(auto i = 0; i < primitives.size(); ++i) {
+    auto& primitive = primitives[i];
+
+    renderView.updateObjectBuffer(i);
     rendererBackend.draw(renderView.programHandle, primitive.getVertexBuffer().getHandle(), primitive.getIndexBuffer().getHandle(), 3, 0);
   }
 

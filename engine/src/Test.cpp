@@ -6,13 +6,14 @@
 #include <enjam/platform.h>
 #include <enjam/renderer.h>
 #include <enjam/render_view.h>
+#include <enjam/scene.h>
 #include <memory>
 #include <fstream>
 #include <sstream>
 
 namespace Enjam {
 
-static void bindKeys(Input& input, RenderView&, bool& isRunning, const std::string& exePath);
+static void bindKeys(Input& input, bool& isRunning, const std::string& exePath);
 RenderPrimitive createTriangle(renderer::RendererBackend& rendererBackend);
 
 struct AppData {
@@ -20,6 +21,7 @@ struct AppData {
   IndexBuffer* indexBuffer;
   ProgramData programData { };
   Camera camera;
+  Scene scene;
 };
 
 AppData createAppData(renderer::RendererBackend& rendererBackend) {
@@ -60,9 +62,11 @@ AppData createAppData(renderer::RendererBackend& rendererBackend) {
   std::stringstream fragmentShaderStrBuffer;
   fragmentShaderStrBuffer << fragmentShaderFile.rdbuf();
 
-  appData.programData.setShader(ShaderStage::VERTEX, vertexShaderStrBuffer.str().c_str())
+  appData.programData
+      .setShader(ShaderStage::VERTEX, vertexShaderStrBuffer.str().c_str())
       .setShader(ShaderStage::FRAGMENT, fragmentShaderStrBuffer.str().c_str())
-      .setDescriptorBinding("perView", 0);
+      .setDescriptorBinding("perView", 0)
+      .setDescriptorBinding("perObject", 1);
 
   appData.camera = {
     .projectionMatrix = math::mat4f::perspective(60, 1.4, 0.1, 10),
@@ -90,12 +94,19 @@ void Test(int argc, char* argv[]) {
   bool isRunning = true;
   appData = createAppData(*rendererBackend);
 
+  appData.scene.getPrimitives().emplace_back(*appData.vertexBuffer, *appData.indexBuffer);
+
+  auto primitive = RenderPrimitive { *appData.vertexBuffer, *appData.indexBuffer };
+  primitive.setTransform(math::mat4f::translation(math::vec3f {1, 0, 0}));
+
+  appData.scene.getPrimitives().emplace_back(primitive);
+
   auto renderView = new RenderView { *rendererBackend };
   renderView->setCamera(&appData.camera);
+  renderView->setScene(&appData.scene);
   renderView->setProgram(rendererBackend->createProgram(appData.programData));
-  renderView->getPrimitives().emplace_back(*appData.vertexBuffer, *appData.indexBuffer);
 
-  bindKeys(input, *renderView, isRunning, exePath);
+  bindKeys(input, isRunning, exePath);
 
   while(isRunning) {
     platform.pollInputEvents();
@@ -131,7 +142,7 @@ static void loadLib(LibraryLoader& libLoader, const std::string& libPath, const 
   funcPtr();
 }
 
-void bindKeys(Input& input, RenderView& renderView, bool& isRunning, const std::string& exePath) {
+void bindKeys(Input& input, bool& isRunning, const std::string& exePath) {
   static std::string libPath { exePath, 0, exePath.find_last_of('/') };
 
   ENJAM_INFO("{}", libPath);
@@ -143,18 +154,22 @@ void bindKeys(Input& input, RenderView& renderView, bool& isRunning, const std::
 
     if(args.keyCode == KeyCode::Left) {
       appData.camera.position += math::vec3f {0.1, 0, 0};
+      ENJAM_INFO("Camera position: {}, {}, {}", appData.camera.position.x, appData.camera.position.y, appData.camera.position.z);
     }
 
     if(args.keyCode == KeyCode::Right) {
       appData.camera.position += math::vec3f {-0.1, 0, 0};
+      ENJAM_INFO("Camera position: {}, {}, {}", appData.camera.position.x, appData.camera.position.y, appData.camera.position.z);
     }
 
     if(args.keyCode == KeyCode::Up) {
       appData.camera.position += math::vec3f {0, 0, 0.1};
+      ENJAM_INFO("Camera position: {}, {}, {}", appData.camera.position.x, appData.camera.position.y, appData.camera.position.z);
     }
 
     if(args.keyCode == KeyCode::Down) {
       appData.camera.position += math::vec3f {0, 0, -0.1};
+      ENJAM_INFO("Camera position: {}, {}, {}", appData.camera.position.x, appData.camera.position.y, appData.camera.position.z);
     }
 
     if(args.keyCode == KeyCode::R && args.super) {

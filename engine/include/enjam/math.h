@@ -84,7 +84,7 @@ class VecProductOperators {
  public:
   template<typename U>
   constexpr VECTOR<T> &operator*=(const VECTOR<U> &v) {
-    VECTOR<T> &lhs = static_cast<VECTOR<T> &>(*this);
+    auto& lhs = static_cast<VECTOR<T>&>(*this);
     for (size_t i = 0; i < lhs.size(); i++) {
       lhs[i] *= v[i];
     }
@@ -145,7 +145,10 @@ class Vec2
   template<typename A>
   constexpr Vec2(const Vec2<A>& v) noexcept : v{ T(v[0]), T(v[1]) } {}
 
-  T v[SIZE];
+  union {
+    T v[SIZE];
+    struct { T x, y; };
+  };
 };
 
 template<typename T>
@@ -192,7 +195,10 @@ class Vec3
         u[0] * v[1] - u[1] * v[0] };
   }
 
-  T v[SIZE];
+  union {
+    T v[SIZE];
+    struct { T x, y, z; };
+  };
 };
 
 template<typename T>
@@ -239,7 +245,36 @@ class Vec4
   template<typename A>
   constexpr Vec4(const Vec4<A>& v) noexcept : v{ T(v[0]), T(v[1]), T(v[2]), T(v[3]) } {}
 
-  T v[SIZE];
+  union {
+    T v[SIZE];
+    struct { T x, y, z, w; };
+  };
+};
+
+template<typename T>
+class Quaternion {
+ public:
+  static constexpr size_t SIZE = 4;
+
+  template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
+  constexpr static Quaternion fromAxisAngle(const Vec3<A>& axis, B angle) {
+    return Quaternion(std::sin(angle * 0.5) * normalize(axis), std::cos(angle * 0.5));
+  }
+
+  inline constexpr T const& operator[](size_t i) const noexcept {
+    assert(i < SIZE);
+    return v[i];
+  }
+
+  inline constexpr T& operator[](size_t i) noexcept {
+    assert(i < SIZE);
+    return v[i];
+  }
+
+  union {
+    T v[SIZE];
+    struct { T x, y, z, w; };
+  };
 };
 
 template<typename T>
@@ -413,6 +448,13 @@ class Mat44 {
         Vec4<T>{ position, 1 } };
   }
 
+  template<typename A>
+  static constexpr Mat44 translation(const Vec3<A>& t) noexcept {
+    Mat44 r;
+    r[3] = Vec4<T>{ t, 1 };
+    return r;
+  }
+
  private:
   col_type values[NUM_COLS];
 };
@@ -420,8 +462,12 @@ class Mat44 {
 using vec2f = Vec2<float>;
 using vec3f = Vec3<float>;
 using vec4f = Vec3<float>;
+using vec2i = Vec2<int32_t>;
+using vec3i = Vec3<int32_t>;
+using vec4i = Vec3<int32_t>;
 using mat3f = Mat33<float>;
 using mat4f = Mat44<float>;
+using quat = Quaternion<float>;
 
 }
 

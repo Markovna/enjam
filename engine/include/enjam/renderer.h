@@ -31,6 +31,10 @@ class ENJAM_API Renderer final {
 
  private:
   RendererBackend& rendererBackend;
+
+  renderer::DescriptorSetHandle viewDescriptorSetHandle;
+  renderer::BufferDataHandle objectsUniformBufferHandle;
+  renderer::BufferDataHandle viewUniformBufferHandle;
 };
 
 }

@@ -14,7 +14,6 @@
 namespace Enjam {
 
 static void bindKeys(Input& input, bool& isRunning, const std::string& exePath);
-RenderPrimitive createTriangle(renderer::RendererBackend& rendererBackend);
 
 struct AppData {
   VertexBuffer* vertexBuffer;
@@ -101,10 +100,10 @@ void Test(int argc, char* argv[]) {
 
   appData.scene.getPrimitives().emplace_back(primitive);
 
-  auto renderView = new RenderView { *rendererBackend };
-  renderView->setCamera(&appData.camera);
-  renderView->setScene(&appData.scene);
-  renderView->setProgram(rendererBackend->createProgram(appData.programData));
+  RenderView renderView;
+  renderView.setCamera(&appData.camera);
+  renderView.setScene(&appData.scene);
+  renderView.setProgram(rendererBackend->createProgram(appData.programData));
 
   bindKeys(input, isRunning, exePath);
 
@@ -112,10 +111,8 @@ void Test(int argc, char* argv[]) {
     platform.pollInputEvents();
     input.update();
 
-    renderer.draw(*renderView);
+    renderer.draw(renderView);
   }
-
-  delete renderView;
 
   renderer.shutdown();
   platform.shutdown();

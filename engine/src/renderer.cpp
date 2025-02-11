@@ -14,25 +14,43 @@ Renderer::Renderer(RendererBackend& backend)
 void Renderer::init() {
   bool initialized = rendererBackend.init();
   ENJAM_ASSERT(initialized && "Failed to initialize renderer backend.");
+
+  viewDescriptorSetHandle = rendererBackend.createDescriptorSet(renderer::DescriptorSetData {
+      .bindings {
+          { .binding = 0, .type = renderer::DescriptorType::UNIFORM_BUFFER },
+          { .binding = 1, .type = renderer::DescriptorType::UNIFORM_BUFFER }
+      }
+  });
+
+  viewUniformBufferHandle = rendererBackend.createBufferData(sizeof(PerViewUniforms), renderer::BufferTargetBinding::UNIFORM);
+  rendererBackend.updateDescriptorSetBuffer(viewDescriptorSetHandle, 0, viewUniformBufferHandle, sizeof(PerViewUniforms), 0);
+
+  objectsUniformBufferHandle = rendererBackend.createBufferData(sizeof(PerObjectUniforms), renderer::BufferTargetBinding::UNIFORM);
+  rendererBackend.updateDescriptorSetBuffer(viewDescriptorSetHandle, 1, objectsUniformBufferHandle, sizeof(PerObjectUniforms), 0);
 }
 
 void Renderer::shutdown() {
+  rendererBackend.destroyDescriptorSet(viewDescriptorSetHandle);
+  rendererBackend.destroyBufferData(viewUniformBufferHandle);
+  rendererBackend.destroyBufferData(objectsUniformBufferHandle);
+
   rendererBackend.shutdown();
 }
 
 void Renderer::draw(RenderView& renderView) {
+  renderView.prepareBuffers();
+
   rendererBackend.beginFrame();
 
-  renderView.updateViewUniformBuffer();
-  renderView.updateObjectsUniformBuffer();
+  rendererBackend.bindDescriptorSet(viewDescriptorSetHandle);
 
-  rendererBackend.bindDescriptorSet(renderView.viewDescriptorSetHandle);
+  renderView.updateViewUniformBuffer(rendererBackend, viewUniformBufferHandle);
 
   auto& primitives = renderView.scene->getPrimitives();
   for(auto i = 0; i < primitives.size(); ++i) {
     auto& primitive = primitives[i];
 
-    renderView.updateObjectBuffer(i);
+    renderView.updateObjectUniformBuffer(rendererBackend, objectsUniformBufferHandle, i);
     rendererBackend.draw(renderView.programHandle, primitive.getVertexBuffer().getHandle(), primitive.getIndexBuffer().getHandle(), 3, 0);
   }
 

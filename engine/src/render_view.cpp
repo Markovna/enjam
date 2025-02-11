@@ -4,48 +4,27 @@
 
 namespace Enjam {
 
-RenderView::RenderView(renderer::RendererBackend& rendererBackend) : rendererBackend(rendererBackend) {
-  viewDescriptorSetHandle = rendererBackend.createDescriptorSet(renderer::DescriptorSetData {
-      .bindings {
-          { .binding = 0, .type = renderer::DescriptorType::UNIFORM_BUFFER },
-          { .binding = 1, .type = renderer::DescriptorType::UNIFORM_BUFFER }
-      }
-  });
-
-  viewUniformBufferHandle = rendererBackend.createBufferData(sizeof(PerViewUniforms), renderer::BufferTargetBinding::UNIFORM);
-  rendererBackend.updateDescriptorSetBuffer(viewDescriptorSetHandle, 0, viewUniformBufferHandle, sizeof(PerViewUniforms), 0);
-
-  objectsUniformBufferHandle = rendererBackend.createBufferData(sizeof(PerObjectUniforms), renderer::BufferTargetBinding::UNIFORM);
-  rendererBackend.updateDescriptorSetBuffer(viewDescriptorSetHandle, 1, objectsUniformBufferHandle, sizeof(PerObjectUniforms), 0);
-}
-
-void RenderView::updateViewUniformBuffer() {
+void RenderView::prepareBuffers() {
+  // prepare per view buffer
   perViewUniformBufferData.projection = camera->projectionMatrix;
   perViewUniformBufferData.view = math::mat4f::lookAt(camera->position, camera->front, camera->up);
 
-  rendererBackend.updateBufferData(viewUniformBufferHandle, { &perViewUniformBufferData, sizeof(perViewUniformBufferData) }, 0);
-}
-
-void RenderView::updateObjectsUniformBuffer() {
+  // prepare per object buffer
   auto& primitives = scene->getPrimitives();
-
   if(primitives.size() > perObjectUniformBufferData.size()) {
     perObjectUniformBufferData.resize(primitives.size());
   }
-
   for(auto i = 0; i < primitives.size(); ++i) {
     perObjectUniformBufferData[i].model = primitives[i].getTransform();
   }
 }
 
-void RenderView::updateObjectBuffer(uint32_t primitiveIndex) {
-  rendererBackend.updateBufferData(objectsUniformBufferHandle, { &perObjectUniformBufferData[primitiveIndex], sizeof(PerObjectUniforms) }, 0);
+void RenderView::updateViewUniformBuffer(renderer::RendererBackend& rendererBackend, renderer::BufferDataHandle handle) {
+  rendererBackend.updateBufferData(handle, { &perViewUniformBufferData, sizeof(perViewUniformBufferData) }, 0);
 }
 
-RenderView::~RenderView() {
-  rendererBackend.destroyDescriptorSet(viewDescriptorSetHandle);
-  rendererBackend.destroyBufferData(viewUniformBufferHandle);
-  rendererBackend.destroyBufferData(objectsUniformBufferHandle);
+void RenderView::updateObjectUniformBuffer(renderer::RendererBackend& rendererBackend, renderer::BufferDataHandle handle, uint32_t primitiveIndex) {
+  rendererBackend.updateBufferData(handle, { &perObjectUniformBufferData[primitiveIndex], sizeof(PerObjectUniforms) }, 0);
 }
 
 }

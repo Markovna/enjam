@@ -30,34 +30,28 @@ class Scene;
 
 class RenderView {
  public:
-  explicit RenderView(renderer::RendererBackend&);
-  ~RenderView();
+  ~RenderView() = default;
 
   void setCamera(Camera* ptr) { camera = ptr; }
   void setScene(Scene* ptr) { scene = ptr; }
   void setProgram(renderer::ProgramHandle handle) { programHandle = handle; }
 
  private:
-  void updateViewUniformBuffer();
-  void updateObjectsUniformBuffer();
-  void updateObjectBuffer(uint32_t primitiveIndex);
-
- private:
   friend class Renderer;
 
+  void prepareBuffers();
+  void updateViewUniformBuffer(renderer::RendererBackend& backend, renderer::BufferDataHandle);
+  void updateObjectUniformBuffer(renderer::RendererBackend& backend, renderer::BufferDataHandle, uint32_t primitiveIndex);
+
+ private:
   using PerObjectUniformBufferData = std::vector<PerObjectUniforms>;
 
-  renderer::BufferDataHandle objectsUniformBufferHandle;
   PerObjectUniformBufferData perObjectUniformBufferData;
-
-  renderer::DescriptorSetHandle viewDescriptorSetHandle;
-  renderer::BufferDataHandle viewUniformBufferHandle;
   PerViewUniforms perViewUniformBufferData;
 
   Scene* scene;
   Camera* camera;
   renderer::ProgramHandle programHandle;
-  renderer::RendererBackend& rendererBackend;
 };
 
 }

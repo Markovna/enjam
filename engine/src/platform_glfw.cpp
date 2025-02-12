@@ -3,13 +3,13 @@
 #include <enjam/input.h>
 #include <enjam/assert.h>
 #include <enjam/renderer_backend_opengl.h>
+#include <enjam/library_loader.h>
 #include <GLFW/glfw3.h>
 
 namespace Enjam {
 
-PlatformGlfw::PlatformGlfw(Input& input)
-  : input(input)
-  , initialized(false) {
+PlatformGlfw::PlatformGlfw()
+  : initialized(false) {
   init();
 }
 
@@ -54,50 +54,47 @@ void PlatformGlfw::init() {
   window = glfwCreateWindow(800, 640, "Enjam", NULL, NULL);
   ENJAM_ASSERT(window != nullptr);
 
-  glfwSetWindowUserPointer(window, this);
   glfwMakeContextCurrent(window);
 
   // set input callbacks
   glfwSetKeyCallback(window, [](GLFWwindow *w, int key, int scancode, int action, int mods) {
-    auto* platform = (PlatformGlfw*) glfwGetWindowUserPointer(w);
+    auto input = (Input*) glfwGetWindowUserPointer(w);
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-      platform->onKeyPress(key, scancode, action, mods);
+      input->onKeyPress().call(
+          KeyPressEventArgs {
+              .keyCode = KeyCode(key),
+              .control = bool(mods & GLFW_MOD_CONTROL),
+              .shift = bool(mods & GLFW_MOD_SHIFT),
+              .alt = bool(mods & GLFW_MOD_ALT),
+              .super = bool(mods & GLFW_MOD_SUPER),
+              .repeat = action == GLFW_REPEAT
+          });
     }
     else if (action == GLFW_RELEASE) {
-      platform->onKeyRelease(key, scancode, action, mods);
+      input->onKeyRelease().call(
+          KeyReleaseEventArgs {
+              .keyCode = KeyCode(key),
+              .control = bool(mods & GLFW_MOD_CONTROL),
+              .shift = bool(mods & GLFW_MOD_SHIFT),
+              .alt = bool(mods & GLFW_MOD_ALT),
+              .super = bool(mods & GLFW_MOD_SUPER)
+          });
     }
   });
+
+  libLoader = new LibraryLoader;
 }
 
-void PlatformGlfw::pollInputEvents() {
+void PlatformGlfw::pollInputEvents(Input& input) {
+  glfwSetWindowUserPointer(window, &input);
   glfwPollEvents();
-}
-
-void PlatformGlfw::onKeyRelease(int key, int scancode, int action, int mods) {
-  input.onKeyRelease().call(
-      KeyReleaseEventArgs {
-          .keyCode = KeyCode(key),
-          .control = bool(mods & GLFW_MOD_CONTROL),
-          .shift = bool(mods & GLFW_MOD_SHIFT),
-          .alt = bool(mods & GLFW_MOD_ALT),
-          .super = bool(mods & GLFW_MOD_SUPER)
-      });
-}
-
-void PlatformGlfw::onKeyPress(int key, int scancode, int action, int mods) {
-  input.onKeyPress().call(
-      KeyPressEventArgs {
-          .keyCode = KeyCode(key),
-          .control = bool(mods & GLFW_MOD_CONTROL),
-          .shift = bool(mods & GLFW_MOD_SHIFT),
-          .alt = bool(mods & GLFW_MOD_ALT),
-          .super = bool(mods & GLFW_MOD_SUPER),
-          .repeat = action == GLFW_REPEAT
-      });
+  glfwSetWindowUserPointer(window, nullptr);
 }
 
 void PlatformGlfw::shutdown() {
   glfwTerminate();
+
+  delete libLoader;
 }
 
 }

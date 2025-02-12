@@ -29,7 +29,7 @@ set(ENJAM_HEADERS
         include/enjam/renderer_backend_opengl.h
         include/enjam/renderer_backend_type.h
         include/enjam/Test.h
-        include/enjam/render_primitive.h include/enjam/scene.h)
+        include/enjam/render_primitive.h include/enjam/scene.h include/enjam/engine.h)
 
 add_library(enjam STATIC ${ENJAM_SOURCES} ${ENJAM_HEADERS})
 

@@ -25,44 +25,43 @@
 
 // TODO: windows platform
 
+namespace Enjam {
+
 LibraryLoader::LibraryLoader()
-  : dllHandle(nullptr) {
+{ }
 
-}
+LibraryLoader::~LibraryLoader()
+{ }
 
-LibraryLoader::~LibraryLoader() {
-  free();
-}
-
-bool LibraryLoader::load(const std::string& path, const std::string& name) {
+Library* LibraryLoader::load(const std::string &path, const std::string &name) {
   const std::string fullPath = path + "/" + LIB_PREFIX + name + LIB_SUFFIX;
 
 #ifdef ENJAM_PLATFORM_WINDOWS
 
 #else
-  dllHandle = ::dlopen(fullPath.c_str(), RTLD_LAZY);
+  void* dllHandle = ::dlopen(fullPath.c_str(), RTLD_LAZY);
 #endif
-  return (dllHandle != nullptr);
+  return (Library*) dllHandle;
 }
 
-void LibraryLoader::free() {
-  if(dllHandle == nullptr) {
+void LibraryLoader::free(Library* lib) {
+  if (lib == nullptr) {
     return;
   }
 
 #ifdef ENJAM_PLATFORM_WINDOWS
 
 #else
-  ::dlclose(dllHandle);
+  ::dlclose(lib);
 #endif
-
-  dllHandle = nullptr;
 }
 
-void* LibraryLoader::getProcAddress(const std::string& name) const {
+void* LibraryLoader::getProcAddress(Library* lib, const std::string &name) const {
 #ifdef ENJAM_PLATFORM_WINDOWS
 
 #else
-  return ::dlsym(dllHandle, name.c_str());
+  return ::dlsym(lib, name.c_str());
 #endif
+}
+
 }

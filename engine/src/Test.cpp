@@ -13,7 +13,7 @@
 
 namespace Enjam {
 
-static void bindKeys(Input& input, bool& isRunning, const std::string& exePath);
+static void bindKeys(Platform& platform, Input& input, bool& isRunning, const std::string& exePath);
 
 struct AppData {
   VertexBuffer* vertexBuffer;
@@ -78,11 +78,13 @@ AppData createAppData(renderer::RendererBackend& rendererBackend) {
 
 static AppData appData;
 
+
+
 void Test(int argc, char* argv[]) {
   std::string exePath = argv[0];
 
-  auto input = Input { };
-  auto platform = Platform { input };
+  Input input { };
+  Platform platform { };
 
   auto rendererBackend = platform.createRendererBackend();
   ENJAM_ASSERT(rendererBackend != nullptr && "Failed to create renderer backend.");
@@ -105,10 +107,10 @@ void Test(int argc, char* argv[]) {
   renderView.setScene(&appData.scene);
   renderView.setProgram(rendererBackend->createProgram(appData.programData));
 
-  bindKeys(input, isRunning, exePath);
+  bindKeys(platform, input, isRunning, exePath);
 
   while(isRunning) {
-    platform.pollInputEvents();
+    platform.pollInputEvents(input);
     input.update();
 
     renderer.draw(renderView);
@@ -119,32 +121,28 @@ void Test(int argc, char* argv[]) {
 }
 
 static void loadLib(LibraryLoader& libLoader, const std::string& libPath, const std::string& name) {
-  libLoader.free();
-
-  bool dllLoaded = libLoader.load(libPath, name);
-  if(!dllLoaded) {
+  auto lib = libLoader.load(libPath, name);
+  if(!lib) {
     ENJAM_ERROR("Loading dll {} at path {} failed", name, libPath);
     return;
   }
 
   typedef void (*GameLoadedFunc)();
 
-  auto* funcPtr = reinterpret_cast<GameLoadedFunc>(libLoader.getProcAddress("gameLoaded"));
+  auto funcPtr = reinterpret_cast<GameLoadedFunc>(libLoader.getProcAddress(lib, "gameLoaded"));
   if(funcPtr == nullptr) {
     ENJAM_ERROR("Loading dll {} at path {} failed", name, libPath);
-    libLoader.free();
+    libLoader.free(lib);
     return;
   }
 
   funcPtr();
 }
 
-void bindKeys(Input& input, bool& isRunning, const std::string& exePath) {
+void bindKeys(Platform& platform, Input& input, bool& isRunning, const std::string& exePath) {
   static std::string libPath { exePath, 0, exePath.find_last_of('/') };
 
   ENJAM_INFO("{}", libPath);
-
-  static LibraryLoader libLoader {};
 
   input.onKeyPress().add([&](auto args) {
     ENJAM_INFO("Key Press event called: {} {}", (uint16_t) args.keyCode, args.alt);
@@ -170,7 +168,7 @@ void bindKeys(Input& input, bool& isRunning, const std::string& exePath) {
     }
 
     if(args.keyCode == KeyCode::R && args.super) {
-      loadLib(libLoader, libPath, "game");
+      loadLib(platform.getLibraryLoader(), libPath, "game");
     }
 
     if(args.keyCode == KeyCode::Escape) {

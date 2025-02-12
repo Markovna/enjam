@@ -2,15 +2,21 @@
 
 #include <string>
 
-class LibraryLoader final {
+namespace Enjam {
+
+class Library;
+
+class LibraryLoader {
  public:
   LibraryLoader();
   ~LibraryLoader();
 
-  bool load(const std::string& path, const std::string& name);
-  void free();
-  void* getProcAddress(const std::string& name) const;
+  LibraryLoader(LibraryLoader&) = delete;
+  LibraryLoader(LibraryLoader&&) = delete;
 
- private:
-  void* dllHandle;
+  Library* load(const std::string &path, const std::string &name);
+  void free(Library*);
+  void* getProcAddress(Library*, const std::string& name) const;
 };
+
+}

@@ -1,32 +1,18 @@
 #ifndef INCLUDE_ENJAM_PLATFORM_GLFW_H_
 #define INCLUDE_ENJAM_PLATFORM_GLFW_H_
 
-#include <enjam/defines.h>
-#include <enjam/renderer_backend_type.h>
+#include <enjam/platform.h>
 
 class GLFWwindow;
 
 namespace Enjam {
 
-using Platform = class PlatformGlfw;
-
-class Input;
-class LibraryLoader;
-
-namespace renderer {
-
-class RendererBackend;
-
-}
-
-class ENJAM_API PlatformGlfw {
+class ENJAM_API PlatformGlfw : public Platform {
  public:
-  explicit PlatformGlfw();
-  renderer::RendererBackend* createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT);
-  void pollInputEvents(Input& input);
+  PlatformGlfw();
+  renderer::RendererBackend* createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT) override;
+  void pollInputEvents(Input& input) override;
   void shutdown();
-
-  LibraryLoader& getLibraryLoader() { return *libLoader; }
 
 private:
   void init();
@@ -34,7 +20,6 @@ private:
 private:
   bool initialized = false;
   GLFWwindow* window;
-  LibraryLoader* libLoader;
 };
 
 }

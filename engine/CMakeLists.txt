@@ -1,5 +1,5 @@
 set(ENJAM_SOURCES
-        src/Test.cpp
+        src/context.cpp
         src/input.cpp
         src/platform_glfw.cpp
         src/program.cpp
@@ -8,7 +8,7 @@ set(ENJAM_SOURCES
         src/library_loader.cpp
         src/renderer.cpp
         src/renderer_backend_opengl.cpp
-        src/render_primitive.cpp src/render_view.cpp src/scene.cpp)
+        src/render_primitive.cpp src/render_view.cpp src/scene.cpp src/platform.cpp)
 
 set(ENJAM_HEADERS
         include/enjam/assert.h
@@ -28,8 +28,8 @@ set(ENJAM_HEADERS
         include/enjam/renderer_backend.h
         include/enjam/renderer_backend_opengl.h
         include/enjam/renderer_backend_type.h
-        include/enjam/Test.h
-        include/enjam/render_primitive.h include/enjam/scene.h include/enjam/engine.h)
+        include/enjam/context.h
+        include/enjam/render_primitive.h include/enjam/scene.h)
 
 add_library(enjam STATIC ${ENJAM_SOURCES} ${ENJAM_HEADERS})
 

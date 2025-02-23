@@ -81,8 +81,6 @@ void PlatformGlfw::init() {
           });
     }
   });
-
-  libLoader = new LibraryLoader;
 }
 
 void PlatformGlfw::pollInputEvents(Input& input) {
@@ -93,8 +91,6 @@ void PlatformGlfw::pollInputEvents(Input& input) {
 
 void PlatformGlfw::shutdown() {
   glfwTerminate();
-
-  delete libLoader;
 }
 
 }

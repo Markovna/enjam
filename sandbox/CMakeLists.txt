@@ -1,4 +1,5 @@
 add_executable(sandbox src/sandbox.cpp)
+set_property(TARGET sandbox PROPERTY ENABLE_EXPORTS ON)
 
 target_link_libraries(sandbox enjam)
 

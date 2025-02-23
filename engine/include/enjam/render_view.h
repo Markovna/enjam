@@ -34,7 +34,6 @@ class RenderView {
 
   void setCamera(Camera* ptr) { camera = ptr; }
   void setScene(Scene* ptr) { scene = ptr; }
-  void setProgram(renderer::ProgramHandle handle) { programHandle = handle; }
 
  private:
   friend class Renderer;
@@ -51,7 +50,6 @@ class RenderView {
 
   Scene* scene;
   Camera* camera;
-  renderer::ProgramHandle programHandle;
 };
 
 }

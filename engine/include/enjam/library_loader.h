@@ -4,19 +4,33 @@
 
 namespace Enjam {
 
-class Library;
+class Library {
+ public:
+  Library(const std::string& path);
+  ~Library();
+
+  bool load();
+  void unload();
+  void* getProcAddress(const std::string& name) const;
+
+  bool isLoaded() const { return handle != nullptr; }
+  const std::string& getPath() const { return path; }
+
+ private:
+  void* handle;
+  std::string path;
+};
+
 
 class LibraryLoader {
  public:
-  LibraryLoader();
-  ~LibraryLoader();
+  LibraryLoader() = default;
+  ~LibraryLoader() = default;
 
-  LibraryLoader(LibraryLoader&) = delete;
+  LibraryLoader(const LibraryLoader&) = delete;
   LibraryLoader(LibraryLoader&&) = delete;
-
-  Library* load(const std::string &path, const std::string &name);
-  void free(Library*);
-  void* getProcAddress(Library*, const std::string& name) const;
+  LibraryLoader& operator=(const LibraryLoader&) = delete;
+  LibraryLoader& operator=(LibraryLoader&&) = delete;
 };
 
 }

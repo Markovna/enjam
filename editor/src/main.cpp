@@ -7,54 +7,47 @@
 #include <enjam/renderer.h>
 #include <enjam/render_view.h>
 #include <enjam/scene.h>
+#include <enjam/utils.h>
 #include <memory>
 #include <filesystem>
+#include <fstream>
 
-static void hotReload(const std::string& libPath, const std::string& name) {
-  static auto libLoader = Enjam::LibraryLoader { };
-
+static void hotReload(const std::filesystem::path& path, Enjam::Context& context) {
   typedef void (*GameLoadedFunc)(Enjam::Context& context);
+  static auto lib = Enjam::Library { path.string() };
 
-  auto lib = libLoader.load(libPath, name);
-  if(!lib) {
-    ENJAM_ERROR("Loading dll {} at path {} failed", name, libPath);
+  if(!lib.load()) {
     return;
   }
 
-  auto funcPtr = reinterpret_cast<GameLoadedFunc>(libLoader.getProcAddress(lib, "gameLoaded"));
-  if(funcPtr == nullptr) {
-    ENJAM_ERROR("Loading dll {} at path {} failed", name, libPath);
-    libLoader.free(lib);
+  const std::string procName = "gameLoaded";
+  auto funcPtr = reinterpret_cast<GameLoadedFunc>(lib.getProcAddress(procName));
+  if (funcPtr == nullptr) {
+    ENJAM_ERROR("Failed to get proc address {}", procName);
     return;
   }
 
-  funcPtr(Enjam::Context::get());
+  funcPtr(context);
 }
 
 int main(int argc, char* argv[]) {
   std::filesystem::path exePath = argv[0];
-  std::string libPath = exePath.parent_path().string();
+  std::filesystem::path libPath = Enjam::utils::libPath(exePath.parent_path().string(), "game");
+  ENJAM_INFO("Libs path: {}", libPath.string());
 
-  auto& context = Enjam::Context::get();
-  context.init();
+  auto context = Enjam::Context { };
 
   auto platform = context.getPlatform();
   auto renderer = context.getRenderer();
-  renderer->init();
-
   auto input = context.getInput();
 
-  auto renderView = Enjam::RenderView { };
-  renderView.setCamera(context.getCamera());
-  renderView.setScene(context.getScene());
-
-  hotReload(libPath, "game");
+  hotReload(libPath, context);
 
   bool isRunning = true;
   input->onKeyPress().add([&](auto args) {
     using KeyCode = Enjam::KeyCode;
     if(args.keyCode == KeyCode::R && args.super) {
-      hotReload(libPath, "game");
+      hotReload(libPath, context);
     }
     if(args.keyCode == KeyCode::Escape) {
       isRunning = false;
@@ -64,7 +57,12 @@ int main(int argc, char* argv[]) {
   auto app = context.getApp();
   ENJAM_ASSERT(app != nullptr);
 
+  renderer->init();
   app->setup();
+
+  auto renderView = Enjam::RenderView { };
+  renderView.setCamera(context.getCamera());
+  renderView.setScene(context.getScene());
 
   while(isRunning) {
     platform->pollInputEvents(*input);
@@ -76,7 +74,5 @@ int main(int argc, char* argv[]) {
   }
 
   app->cleanup();
-
   renderer->shutdown();
-  context.destroy();
 }

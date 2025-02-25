@@ -1,8 +1,7 @@
 #pragma once
 
 #include "defines.h"
-#include <functional>
-#include <utility>
+#include <string>
 
 namespace Enjam {
 
@@ -27,20 +26,19 @@ class App {
   virtual void cleanup() = 0;
 };
 
+struct Config {
+  std::string assetsPath;
+};
+
 class Context final {
  public:
-  Context() = default;
-  ~Context() = default;
+  Context();
+  ~Context();
 
   Context(const Context&) = delete;
   Context(Context&&) = delete;
   Context& operator=(const Context&) = delete;
   Context& operator=(Context&&) = delete;
-
-  static Context& get();
-
-  void init();
-  void destroy();
 
   Platform* getPlatform() { return platform; }
   Input* getInput() { return input; }

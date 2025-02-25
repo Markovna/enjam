@@ -5,4 +5,5 @@ project(enjam)
 
 add_subdirectory(external EXCLUDE_FROM_ALL)
 add_subdirectory(engine)
+add_subdirectory(editor)
 add_subdirectory(sandbox)

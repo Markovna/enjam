@@ -102,7 +102,7 @@ class GameApp : public Enjam::App {
   }
 
   void cleanup() override {
-
+    ENJAM_INFO("Game cleanup finished.");
   }
 
  private:
@@ -116,9 +116,11 @@ class GameApp : public Enjam::App {
   Enjam::renderer::ProgramHandle programHandle;
 };
 
+GameApp* app;
+
 void gameLoaded(Enjam::Context& context) {
   ENJAM_INFO("Game loaded!");
 
-  auto app = new GameApp { *context.getCamera(), *context.getScene(), *context.getRendererBackend(), *context.getInput() };
+  app = new GameApp {*context.getCamera(), *context.getScene(), *context.getRendererBackend(), *context.getInput()};
   context.setApp(app);
 }

@@ -56,20 +56,25 @@ class BufferObject {
 
 class RenderPrimitive {
  public:
-  RenderPrimitive(VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, renderer::ProgramHandle programHandle)
+  RenderPrimitive(VertexBuffer* vertexBuffer = nullptr, IndexBuffer* indexBuffer = nullptr, renderer::ProgramHandle programHandle = { })
     : vertexBuffer(vertexBuffer), indexBuffer(indexBuffer), programHandle(programHandle), transform(1)
   { }
 
-  VertexBuffer& getVertexBuffer() { return vertexBuffer; }
-  IndexBuffer& getIndexBuffer() { return indexBuffer; }
+  VertexBuffer* getVertexBuffer() { return vertexBuffer; }
+  IndexBuffer* getIndexBuffer() { return indexBuffer; }
+
+  void setVertexBuffer(VertexBuffer* buffer) { vertexBuffer = buffer; }
+  void setIndexBuffer(IndexBuffer* buffer) { indexBuffer = buffer; }
+
   renderer::ProgramHandle getProgramHandle() { return programHandle; }
+  void setProgramHandle(renderer::ProgramHandle handle) { programHandle = handle; }
 
   const math::mat4f& getTransform() const { return transform; }
-  void setTransform(math::mat4f&& tr) { transform = std::move(tr); }
+  void setTransform(math::mat4f&& tr) { transform = tr; }
 
  private:
-  VertexBuffer& vertexBuffer;
-  IndexBuffer& indexBuffer;
+  VertexBuffer* vertexBuffer;
+  IndexBuffer* indexBuffer;
   renderer::ProgramHandle programHandle;
   math::mat4f transform;
 };

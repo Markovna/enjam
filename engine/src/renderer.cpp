@@ -51,7 +51,7 @@ void Renderer::draw(RenderView& renderView) {
     auto& primitive = primitives[i];
 
     renderView.updateObjectUniformBuffer(rendererBackend, objectsUniformBufferHandle, i);
-    rendererBackend.draw(primitive.getProgramHandle(), primitive.getVertexBuffer().getHandle(), primitive.getIndexBuffer().getHandle(), 3, 0);
+    rendererBackend.draw(primitive.getProgramHandle(), primitive.getVertexBuffer()->getHandle(), primitive.getIndexBuffer()->getHandle(), 3, 0);
   }
 
   rendererBackend.endFrame();

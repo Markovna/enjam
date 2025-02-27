@@ -2,4 +2,5 @@
 
 #include <enjam/context.h>
 
-extern "C" void gameLoaded(Enjam::Context& context);
+extern "C" void loadLib(Enjam::Context& context);
+extern "C" void unloadLib(Enjam::Context& context);

@@ -18,6 +18,10 @@ class GameApp : public Enjam::App {
 
   }
 
+  ~GameApp() override {
+    cleanup();
+  }
+
   void setup() override {
     static const float vertexData[] {
         -0.5f, 0.5f, 0.0f,
@@ -63,36 +67,37 @@ class GameApp : public Enjam::App {
         .setDescriptorBinding("perObject", 1);
 
     camera.projectionMatrix = Enjam::math::mat4f::perspective(60, 1.4, 0.1, 10);
-    camera.position =Enjam:: math::vec3f { 0, 0, -1 };
+    camera.position = Enjam:: math::vec3f { 0, 0, -5 };
     camera.front = Enjam::math::vec3f { 0, 0, 1 };
     camera.up = Enjam::math::vec3f { 0, 1, 0 };
 
-    input.onKeyPress().add([&](auto args) {
-      using KeyCode = Enjam::KeyCode;
-      if(args.keyCode == KeyCode::Left) {
-        camera.position += Enjam::math::vec3f {0.1, 0, 0};
-      }
-
-      if(args.keyCode == KeyCode::Right) {
-        camera.position += Enjam::math::vec3f {-0.1, 0, 0};
-      }
-
-      if(args.keyCode == KeyCode::Up) {
-        camera.position += Enjam::math::vec3f {0, 0, 0.1};
-      }
-
-      if(args.keyCode == KeyCode::Down) {
-        camera.position += Enjam::math::vec3f {0, 0, -0.1};
-      }
-    });
+//    input.onKeyPress().add([&](auto args) {
+//      using KeyCode = Enjam::KeyCode;
+//      if(args.keyCode == KeyCode::Left) {
+//        camera.position += Enjam::math::vec3f {0.1, 0, 0};
+//      }
+//
+//      if(args.keyCode == KeyCode::Right) {
+//        camera.position += Enjam::math::vec3f {-0.1, 0, 0};
+//      }
+//
+//      if(args.keyCode == KeyCode::Up) {
+//        camera.position += Enjam::math::vec3f {0, 0, 0.1};
+//      }
+//
+//      if(args.keyCode == KeyCode::Down) {
+//        camera.position += Enjam::math::vec3f {0, 0, -0.1};
+//      }
+//    });
 
     programHandle = rendererBackend.createProgram(programData);
-    scene.getPrimitives().emplace_back(*vertexBuffer, *indexBuffer, programHandle);
 
-    auto primitive = Enjam::RenderPrimitive { *vertexBuffer, *indexBuffer, programHandle };
-    primitive.setTransform(Enjam::math::mat4f::translation(Enjam::math::vec3f {1, 0, 0}));
+    scene.getPrimitives().emplace_back( vertexBuffer, indexBuffer, programHandle );
 
-    scene.getPrimitives().emplace_back(primitive);
+    auto triangle = Enjam::RenderPrimitive { vertexBuffer, indexBuffer, programHandle };
+    triangle.setTransform(Enjam::math::mat4f::translation(Enjam::math::vec3f {1, 0, 0}));
+
+    scene.getPrimitives().push_back(triangle);
 
     ENJAM_INFO("Game setup finished.");
   }
@@ -102,6 +107,26 @@ class GameApp : public Enjam::App {
   }
 
   void cleanup() override {
+    auto& primitives = scene.getPrimitives();
+    primitives.clear();
+
+    if(vertexBuffer) {
+      vertexBuffer->destroy(rendererBackend);
+      delete vertexBuffer;
+      vertexBuffer = nullptr;
+    }
+
+    if(indexBuffer) {
+      indexBuffer->destroy(rendererBackend);
+      delete indexBuffer;
+      indexBuffer = nullptr;
+    }
+
+    if(programHandle) {
+      rendererBackend.destroyProgram(programHandle);
+      programHandle = { };
+    }
+
     ENJAM_INFO("Game cleanup finished.");
   }
 
@@ -111,16 +136,49 @@ class GameApp : public Enjam::App {
   Enjam::Input& input;
   Enjam::renderer::RendererBackend& rendererBackend;
 
-  Enjam::VertexBuffer* vertexBuffer;
-  Enjam::IndexBuffer* indexBuffer;
-  Enjam::renderer::ProgramHandle programHandle;
+  Enjam::VertexBuffer* vertexBuffer = nullptr;
+  Enjam::IndexBuffer* indexBuffer = nullptr;
+  Enjam::renderer::ProgramHandle programHandle = { };
 };
 
-GameApp* app;
+GameApp* app = nullptr;
 
-void gameLoaded(Enjam::Context& context) {
+void loadLib(Enjam::Context& context) {
+  auto create = [&context]() {
+    ENJAM_INFO("Creating game instance...");
+    app = new GameApp {
+        *context.getCamera(),
+        *context.getScene(),
+        *context.getRendererBackend(),
+        *context.getInput()
+    };
+    app->setup();
+  };
+
+  context.onCreateApp(create);
+
+  context.onTickApp([&context]() {
+    if(!app) {
+      app = new GameApp {
+          *context.getCamera(),
+          *context.getScene(),
+          *context.getRendererBackend(),
+          *context.getInput()
+      };
+      app->setup();
+    }
+
+    app->tick();
+  });
+
+  context.onDestroyApp([&]() {
+    delete app;
+  });
   ENJAM_INFO("Game loaded!");
+}
 
-  app = new GameApp {*context.getCamera(), *context.getScene(), *context.getRendererBackend(), *context.getInput()};
-  context.setApp(app);
+void unloadLib(Enjam::Context& context) {
+  delete app;
+
+  ENJAM_INFO("Game unloaded!");
 }

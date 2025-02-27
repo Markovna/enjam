@@ -2,6 +2,7 @@
 
 #include "defines.h"
 #include <string>
+#include <utility>
 
 namespace Enjam {
 
@@ -32,6 +33,11 @@ struct Config {
 
 class Context final {
  public:
+  using CreateAppCallback = std::function<void()>;
+  using TickAppCallback = std::function<void()>;
+  using DestroyAppCallback = std::function<void()>;
+
+ public:
   Context();
   ~Context();
 
@@ -47,8 +53,14 @@ class Context final {
   Scene* getScene() { return scene; }
   Camera* getCamera() { return camera; }
 
-  App* getApp() { return application; }
-  void setApp(App* app) { application = app; }
+  void onCreateApp(CreateAppCallback callback) { createAppCallback = std::move(callback); }
+  void createApp() { return createAppCallback(); }
+
+  void onDestroyApp(DestroyAppCallback callback) { destroyAppCallback = std::move(callback); }
+  void destroyApp() { return destroyAppCallback(); }
+
+  void onTickApp(TickAppCallback callback) { tickAppCallback = std::move(callback); }
+  void tickApp() { return tickAppCallback(); }
 
  private:
   Platform* platform;
@@ -58,6 +70,9 @@ class Context final {
   App* application;
   Scene* scene;
   Camera* camera;
+  CreateAppCallback createAppCallback;
+  DestroyAppCallback destroyAppCallback;
+  TickAppCallback tickAppCallback;
 };
 
 }

@@ -22,11 +22,16 @@
 
 #define LIB_SUFFIX "." LIB_EXTENSION_NAME
 
-std::string Enjam::utils::libPath(const std::string& path, const std::string& name) {
-  return path + "/" + LIB_PREFIX + name + LIB_SUFFIX;
+Enjam::utils::Path Enjam::utils::libPath(const Enjam::utils::Path& path, const std::string& name) {
+  return path / Path { LIB_PREFIX + name + LIB_SUFFIX };
 }
 
-void* Enjam::utils::loadLib(const std::string &path) {
+Enjam::utils::Path Enjam::utils::getTempFilePath(const Enjam::utils::Path& directory, const Enjam::utils::Path& filename) {
+  const std::time_t now = std::time(nullptr);
+  return directory / Path { std::to_string(now) + filename.string() };
+}
+
+void* Enjam::utils::loadLib(const Enjam::utils::Path& path) {
 
 #ifdef ENJAM_PLATFORM_WINDOWS
 

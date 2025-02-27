@@ -2,12 +2,16 @@
 #define INCLUDE_ENJAM_UTILS_H_
 
 #include <string>
+#include <filesystem>
 
 namespace Enjam::utils {
 
-std::string libPath(const std::string& path, const std::string& name);
+using Path = std::filesystem::path;
 
-void* loadLib(const std::string &path);
+Path libPath(const Path& path, const std::string& name);
+Path getTempFilePath(const Path& directory, const Path& filename);
+
+void* loadLib(const Path& path);
 void freeLib(void*);
 void* getProcAddress(void*, const std::string& name);
 

@@ -11,28 +11,28 @@
 #include <memory>
 #include <filesystem>
 
+typedef void (*GameLoadedFunc)(Enjam::Context& context);
+
+static Enjam::utils::Path createDllCacheDir() {
+  auto path = std::filesystem::current_path() / "dll-cache";
+  if(!std::filesystem::exists(path)) {
+    bool success = std::filesystem::create_directory(path);
+    if(!success) {
+      ENJAM_ERROR("Failed to create directory {}", path.string());
+      return { };
+    }
+  }
+  return path;
+}
+
 static void load(const std::string& path, Enjam::Context& context) {
-  typedef void (*GameLoadedFunc)(Enjam::Context& context);
-
-  auto lib = Enjam::utils::loadLib(path);
-  if(!lib) {
-    ENJAM_ERROR("Loading dll at path {} failed", path);
-    return;
-  }
-
-  auto funcPtr = reinterpret_cast<GameLoadedFunc>(Enjam::utils::getProcAddress(lib, "gameLoaded"));
-  if(funcPtr == nullptr) {
-    ENJAM_ERROR("Loading dll at path {} failed", path);
-    Enjam::utils::freeLib(lib);
-    return;
-  }
-
-  funcPtr(context);
+  static auto libLoader = Enjam::LibraryLoader { createDllCacheDir() };
+  libLoader.load(path, context);
 }
 
 int main(int argc, char* argv[]) {
   std::filesystem::path exePath = argv[0];
-  std::string libPath = Enjam::utils::libPath(exePath.parent_path().string(), "game");
+  std::string libPath = Enjam::utils::libPath(exePath.parent_path(), "game");
 
   auto context = Enjam::Context { };
 
@@ -45,16 +45,17 @@ int main(int argc, char* argv[]) {
   bool isRunning = true;
   input->onKeyPress().add([&](auto args) {
     using KeyCode = Enjam::KeyCode;
+    if(args.keyCode == KeyCode::R && args.super) {
+      load(libPath, context);
+    }
+
     if(args.keyCode == KeyCode::Escape) {
       isRunning = false;
     }
   });
 
-  auto app = context.getApp();
-  ENJAM_ASSERT(app != nullptr);
-
   renderer->init();
-  app->setup();
+  context.createApp();
 
   auto renderView = Enjam::RenderView { };
   renderView.setCamera(context.getCamera());
@@ -64,11 +65,11 @@ int main(int argc, char* argv[]) {
     platform->pollInputEvents(*input);
     input->update();
 
-    app->tick();
+    context.tickApp();
 
     renderer->draw(renderView);
   }
 
-  app->cleanup();
+  context.destroyApp();
   renderer->shutdown();
 }

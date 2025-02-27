@@ -9,10 +9,8 @@
 #include <enjam/scene.h>
 #include <enjam/utils.h>
 #include <memory>
-#include <filesystem>
-#include <fstream>
 
-static void hotReload(const std::filesystem::path& path, Enjam::Context& context) {
+static void hotReload(const Enjam::utils::Path& path, Enjam::Context& context) {
   typedef void (*GameLoadedFunc)(Enjam::Context& context);
   static auto lib = Enjam::Library { path.string() };
 
@@ -31,8 +29,8 @@ static void hotReload(const std::filesystem::path& path, Enjam::Context& context
 }
 
 int main(int argc, char* argv[]) {
-  std::filesystem::path exePath = argv[0];
-  std::filesystem::path libPath = Enjam::utils::libPath(exePath.parent_path().string(), "game");
+  Enjam::utils::Path exePath = argv[0];
+  Enjam::utils::Path libPath = Enjam::utils::libPath(exePath.parent_path().string(), "game");
   ENJAM_INFO("Libs path: {}", libPath.string());
 
   auto context = Enjam::Context { };

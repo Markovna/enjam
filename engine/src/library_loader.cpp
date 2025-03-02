@@ -6,7 +6,7 @@
 
 namespace Enjam {
 
-Library::Library(Path  path)
+Library::Library(Path path)
   : path(std::move(path)), handle(nullptr) {
 
 }
@@ -17,7 +17,7 @@ Library::Library(Library&& other)
 }
 
 Library& Library::operator=(Library&& other) noexcept {
-  if(handle) {
+  if(handle && handle != other.handle) {
     unload();
   }
 
@@ -55,11 +55,12 @@ void* Library::getProcAddress(const std::string& name) const {
   return utils::getProcAddress(handle, name);
 }
 
-LibraryLoader::LibraryLoader(Path path) : path(std::move(path)) {
+LibraryLoader::LibraryLoader(Path path, LoadCallback load, UnloadCallback unload)
+: path(std::move(path)), mLoad(load), mUnload(unload) {
 
 }
 
-void LibraryLoader::load(const Path& libPath, Context& context) {
+void LibraryLoader::load(const Path& libPath) {
   auto tmpFilePath = utils::getTempFilePath(path, libPath.filename());
   bool copied = copy_file(libPath, tmpFilePath);
   if(!copied) {
@@ -68,54 +69,38 @@ void LibraryLoader::load(const Path& libPath, Context& context) {
   }
 
   Library lib = Library { tmpFilePath };
-  load(lib, context);
+  load(lib);
 
   auto it = libs.find(libPath.filename());
   if(it != libs.end()) {
-    unload(it->second, context);
+    unload(it->second);
     it->second = std::move(lib);
   } else {
     it = libs.emplace(libPath.filename(), std::move(lib)).first;
   }
 }
 
-void LibraryLoader::unload(const Path& libPath, Context& context) {
+void LibraryLoader::unload(const Path& libPath) {
   auto it = libs.find(libPath.filename());
   if(it != libs.end()) {
-    unload(it->second, context);
+    unload(it->second);
+    libs.erase(it);
   }
-
-  libs.erase(it);
 }
 
 
-void LibraryLoader::load(Library& lib, Context& context) {
-  const std::string funcName = "loadLib";
+void LibraryLoader::load(Library& lib) {
   bool loaded = lib.load();
   if(!loaded) {
     ENJAM_ERROR("Failed to load lib at path: {}", lib.getPath().string());
     return;
   }
 
-  auto funcPtr = reinterpret_cast<LoadFunc>(lib.getProcAddress(funcName));
-  if(!funcPtr) {
-    ENJAM_ERROR("Failed to find func {} in {}", funcName, lib.getPath().string());
-    return;
-  }
-
-  funcPtr(context);
+  mLoad(lib);
 }
 
-void LibraryLoader::unload(Library& lib, Context& context) {
-  const std::string funcName = "unloadLib";
-  auto funcPtr = reinterpret_cast<UnloadFunc>(lib.getProcAddress(funcName));
-  if(!funcPtr) {
-    ENJAM_ERROR("Failed to find func {} in {}", funcName, lib.getPath().string());
-    lib.unload();
-    return;
-  }
-
-  funcPtr(context);
+void LibraryLoader::unload(Library& lib) {
+  mUnload(lib);
   lib.unload();
 }
 

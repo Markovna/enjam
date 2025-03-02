@@ -1,8 +1,9 @@
+# Sandbox executable
 add_executable(sandbox src/main.cpp)
 set_property(TARGET sandbox PROPERTY ENABLE_EXPORTS ON)
-
 target_link_libraries(sandbox enjam)
 
+# Sandbox shared lib
 add_library(game SHARED src/game.cpp)
 target_link_libraries(game enjam)
 
@@ -15,3 +16,4 @@ foreach (shader_src ${SHADERS})
     configure_file(${shader_src} ${output_path} COPYONLY)
 #    list(APPEND SHADER_BINS ${output_path})
 endforeach()
+

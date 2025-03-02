@@ -1,3 +1,4 @@
+#include <enjam/application.h>
 #include <enjam/context.h>
 #include <enjam/log.h>
 #include <enjam/assert.h>
@@ -9,68 +10,110 @@
 #include <enjam/scene.h>
 #include <enjam/utils.h>
 #include <memory>
+#include <filesystem>
 
-static void hotReload(const Enjam::utils::Path& path, Enjam::Context& context) {
-  typedef void (*GameLoadedFunc)(Enjam::Context& context);
-  static auto lib = Enjam::Library { path.string() };
+Enjam::utils::Path createDllCacheDir(const Enjam::utils::Path& currentPath) {
+  auto path = currentPath / "dll-cache";
+  if(!std::filesystem::exists(path)) {
+    bool success = std::filesystem::create_directory(path);
+    if(!success) {
+      ENJAM_ERROR("Failed to create directory {}", path.string());
+      return { };
+    }
+  }
+  return path;
+}
 
-  if(!lib.load()) {
+void onUnloadLib(Enjam::Library& lib) {
+  typedef void (*UnloadFunc)(Enjam::Application& app);
+  const std::string funcName = "unloadLib";
+  auto funcPtr = reinterpret_cast<UnloadFunc>(lib.getProcAddress(funcName));
+  if(!funcPtr) {
+    ENJAM_ERROR("Failed to find func {} in {}", funcName, lib.getPath().string());
     return;
   }
 
-  const std::string procName = "gameLoaded";
-  auto funcPtr = reinterpret_cast<GameLoadedFunc>(lib.getProcAddress(procName));
-  if (funcPtr == nullptr) {
-    ENJAM_ERROR("Failed to get proc address {}", procName);
+  funcPtr(Enjam::Application::get());
+}
+
+void onLoadLib(Enjam::Library& lib) {
+  typedef void (*LoadFunc)(Enjam::Application& app);
+  const std::string funcName = "loadLib";
+  auto funcPtr = reinterpret_cast<LoadFunc>(lib.getProcAddress(funcName));
+  if(!funcPtr) {
+    ENJAM_ERROR("Failed to find func {} in {}", funcName, lib.getPath().string());
     return;
   }
 
-  funcPtr(context);
+  funcPtr(Enjam::Application::get());
 }
 
 int main(int argc, char* argv[]) {
-  Enjam::utils::Path exePath = argv[0];
-  Enjam::utils::Path libPath = Enjam::utils::libPath(exePath.parent_path().string(), "game");
-  ENJAM_INFO("Libs path: {}", libPath.string());
+  std::filesystem::path exePath = argv[1];
+  std::filesystem::path exeFolder = exePath;
+  std::string libPath = Enjam::utils::libPath(exeFolder, "game");
 
-  auto context = Enjam::Context { };
+  auto libLoader = Enjam::LibraryLoader { createDllCacheDir(exeFolder), onLoadLib, onUnloadLib };
+  libLoader.load(libPath);
 
-  auto platform = context.getPlatform();
-  auto renderer = context.getRenderer();
-  auto input = context.getInput();
+  auto& app = Enjam::Application::get();
 
-  hotReload(libPath, context);
+  auto platform = app.getPlatform();
+  auto input = app.getInput();
+  auto renderer = app.getRenderer();
+  bool hotReload = false;
 
-  bool isRunning = true;
-  input->onKeyPress().add([&](auto args) {
+  input->onKeyPress().add([&hotReload](auto& args){
     using KeyCode = Enjam::KeyCode;
     if(args.keyCode == KeyCode::R && args.super) {
-      hotReload(libPath, context);
-    }
-    if(args.keyCode == KeyCode::Escape) {
-      isRunning = false;
+      ENJAM_INFO("Requested hot reload");
+      hotReload = true;
     }
   });
 
-  auto app = context.getApp();
-  ENJAM_ASSERT(app != nullptr);
+  Enjam::RenderView renderView = { };
+  renderView.setScene(app.getScene());
+  renderView.setCamera(app.getCamera());
 
-  renderer->init();
-  app->setup();
+  std::unique_ptr<Enjam::Simulation> sim { };
 
-  auto renderView = Enjam::RenderView { };
-  renderView.setCamera(context.getCamera());
-  renderView.setScene(context.getScene());
+  auto setup = [&app, &sim](){
+    sim = app.createSimulation();
+    if(sim) {
+      sim->start();
+    }
+  };
 
-  while(isRunning) {
+  auto cleanup = [&sim](){
+    if(sim) {
+      sim->stop();
+      sim.reset();
+    }
+  };
+
+  auto tick = [&app, &libLoader, &libPath, platform, input, renderer, &renderView, &sim, &hotReload](){
     platform->pollInputEvents(*input);
     input->update();
 
-    app->tick();
+    if(hotReload) {
+      sim->stop();
+      sim.reset();
+
+      libLoader.load(libPath);
+      sim = app.createSimulation();
+      sim->start();
+
+      hotReload = false;
+    }
+
+    if(sim) {
+      sim->tick();
+    }
 
     renderer->draw(renderView);
-  }
+  };
 
-  app->cleanup();
-  renderer->shutdown();
+  app.run(setup, cleanup, tick);
+  libLoader.unload(libPath);
+  return 0;
 }

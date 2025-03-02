@@ -1,6 +1,6 @@
 #include "game.h"
+#include <enjam/application.h>
 #include <enjam/log.h>
-#include <enjam/context.h>
 #include <enjam/scene.h>
 #include <enjam/render_primitive.h>
 #include <enjam/render_view.h>
@@ -10,19 +10,25 @@
 #include <fstream>
 #include <sstream>
 
-class GameApp : public Enjam::App {
+class SandboxSimulation : public Enjam::Simulation {
  public:
-  GameApp(Enjam::Camera& camera, Enjam::Scene& scene, Enjam::renderer::RendererBackend& rendererBackend, Enjam::Input& input)
-    : camera(camera), scene(scene), input(input), rendererBackend(rendererBackend)
-  {
+  SandboxSimulation(Enjam::Renderer &renderer,
+                    Enjam::Input &input,
+                    Enjam::renderer::RendererBackend &rendererBackend,
+                    Enjam::Camera &camera,
+                    Enjam::Scene &scene)
+      : renderer(renderer)
+      , input(input)
+      , rendererBackend(rendererBackend)
+      , camera(camera)
+      , scene(scene)
+      {}
 
+  ~SandboxSimulation() {
+    ENJAM_INFO("~SandboxSimulation");
   }
 
-  ~GameApp() override {
-    cleanup();
-  }
-
-  void setup() override {
+  void start() {
     static const float vertexData[] {
         -0.5f, 0.5f, 0.0f,
         0.0f, -0.5f, 0.0f,
@@ -67,28 +73,11 @@ class GameApp : public Enjam::App {
         .setDescriptorBinding("perObject", 1);
 
     camera.projectionMatrix = Enjam::math::mat4f::perspective(60, 1.4, 0.1, 10);
-    camera.position = Enjam:: math::vec3f { 0, 0, -5 };
+    camera.position = Enjam:: math::vec3f { 0, 0, -3 };
     camera.front = Enjam::math::vec3f { 0, 0, 1 };
     camera.up = Enjam::math::vec3f { 0, 1, 0 };
 
-//    input.onKeyPress().add([&](auto args) {
-//      using KeyCode = Enjam::KeyCode;
-//      if(args.keyCode == KeyCode::Left) {
-//        camera.position += Enjam::math::vec3f {0.1, 0, 0};
-//      }
-//
-//      if(args.keyCode == KeyCode::Right) {
-//        camera.position += Enjam::math::vec3f {-0.1, 0, 0};
-//      }
-//
-//      if(args.keyCode == KeyCode::Up) {
-//        camera.position += Enjam::math::vec3f {0, 0, 0.1};
-//      }
-//
-//      if(args.keyCode == KeyCode::Down) {
-//        camera.position += Enjam::math::vec3f {0, 0, -0.1};
-//      }
-//    });
+    input.onKeyPress().add(onKeyPress);
 
     programHandle = rendererBackend.createProgram(programData);
 
@@ -99,14 +88,10 @@ class GameApp : public Enjam::App {
 
     scene.getPrimitives().push_back(triangle);
 
-    ENJAM_INFO("Game setup finished.");
+    ENJAM_INFO("Simulation started!");
   }
 
-  void tick() override {
-
-  }
-
-  void cleanup() override {
+  void stop() {
     auto& primitives = scene.getPrimitives();
     primitives.clear();
 
@@ -127,58 +112,61 @@ class GameApp : public Enjam::App {
       programHandle = { };
     }
 
-    ENJAM_INFO("Game cleanup finished.");
+    input.onKeyPress().remove(onKeyPress);
+
+    ENJAM_INFO("Simulation stopped!");
+  }
+
+  void tick() {
+
   }
 
  private:
-  Enjam::Camera& camera;
-  Enjam::Scene& scene;
+  Enjam::Renderer& renderer;
   Enjam::Input& input;
   Enjam::renderer::RendererBackend& rendererBackend;
+  Enjam::Camera& camera;
+  Enjam::Scene& scene;
 
   Enjam::VertexBuffer* vertexBuffer = nullptr;
   Enjam::IndexBuffer* indexBuffer = nullptr;
   Enjam::renderer::ProgramHandle programHandle = { };
+
+  Enjam::KeyPressEvent::EventHandler onKeyPress = Enjam::KeyPressEvent::EventHandler {
+    [this](const Enjam::KeyPressEventArgs& args) {
+      using KeyCode = Enjam::KeyCode;
+      if(args.keyCode == KeyCode::Left) {
+        camera.position += Enjam::math::vec3f {0.1, 0, 0};
+      }
+
+      if(args.keyCode == KeyCode::Right) {
+        camera.position += Enjam::math::vec3f {-0.1, 0, 0};
+      }
+
+      if(args.keyCode == KeyCode::Up) {
+        camera.position += Enjam::math::vec3f {0, 0, 0.1};
+      }
+
+      if(args.keyCode == KeyCode::Down) {
+        camera.position += Enjam::math::vec3f {0, 0, -0.1};
+      }
+    }};
 };
 
-GameApp* app = nullptr;
+void loadLib(Enjam::Application& app) {
+  auto& renderer = *app.getRenderer();
+  auto& input = *app.getInput();
+  auto& rendererBackend = *app.getRendererBackend();
+  auto& camera = *app.getCamera();
+  auto& scene = *app.getScene();
 
-void loadLib(Enjam::Context& context) {
-  auto create = [&context]() {
-    ENJAM_INFO("Creating game instance...");
-    app = new GameApp {
-        *context.getCamera(),
-        *context.getScene(),
-        *context.getRendererBackend(),
-        *context.getInput()
-    };
-    app->setup();
-  };
-
-  context.onCreateApp(create);
-
-  context.onTickApp([&context]() {
-    if(!app) {
-      app = new GameApp {
-          *context.getCamera(),
-          *context.getScene(),
-          *context.getRendererBackend(),
-          *context.getInput()
-      };
-      app->setup();
-    }
-
-    app->tick();
+  app.setSimulationFactory([&renderer, &input, &rendererBackend, &camera, &scene]() {
+    return std::make_unique<SandboxSimulation>(renderer, input, rendererBackend, camera, scene);
   });
 
-  context.onDestroyApp([&]() {
-    delete app;
-  });
-  ENJAM_INFO("Game loaded!");
-}
+};
 
-void unloadLib(Enjam::Context& context) {
-  delete app;
+void unloadLib(Enjam::Application& app) {
 
   ENJAM_INFO("Game unloaded!");
 }

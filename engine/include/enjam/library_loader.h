@@ -37,9 +37,11 @@ class Library {
 
 class LibraryLoader {
  public:
+  using LoadCallback = std::function<void(Library&)>;
+  using UnloadCallback = std::function<void(Library&)>;
   using Path = utils::Path;
 
-  explicit LibraryLoader(Path path);
+  explicit LibraryLoader(Path path, LoadCallback, UnloadCallback);
   ~LibraryLoader() = default;
 
   LibraryLoader(const LibraryLoader&) = delete;
@@ -47,19 +49,18 @@ class LibraryLoader {
   LibraryLoader& operator=(const LibraryLoader&) = delete;
   LibraryLoader& operator=(LibraryLoader&&) = delete;
 
-  void load(const Path&, Context& context);
-  void unload(const Path&, Context& context);
+  void load(const Path&);
+  void unload(const Path&);
   void clear();
 
  private:
-  void load(Library& lib, Context& context);
-  void unload(Library& lib, Context& context);
+  void load(Library& lib);
+  void unload(Library& lib);
 
  private:
-  typedef void (*LoadFunc)(Context& context);
-  typedef void (*UnloadFunc)(Context& context);
-
   Path path;
+  LoadCallback mLoad;
+  UnloadCallback mUnload;
   std::unordered_map<std::string, Library> libs;
 };
 

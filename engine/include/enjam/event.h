@@ -1,5 +1,6 @@
 #pragma once
 
+#include <enjam/log.h>
 #include <functional>
 #include <future>
 #include <mutex>

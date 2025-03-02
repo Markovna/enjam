@@ -1,4 +1,4 @@
-#include <enjam/context.h>
+#include <enjam/application.h>
 #include <enjam/log.h>
 #include <enjam/assert.h>
 #include <enjam/input.h>
@@ -11,10 +11,8 @@
 #include <memory>
 #include <filesystem>
 
-typedef void (*GameLoadedFunc)(Enjam::Context& context);
-
-static Enjam::utils::Path createDllCacheDir() {
-  auto path = std::filesystem::current_path() / "dll-cache";
+Enjam::utils::Path createDllCacheDir(const Enjam::utils::Path& currentPath) {
+  auto path = currentPath / "dll-cache";
   if(!std::filesystem::exists(path)) {
     bool success = std::filesystem::create_directory(path);
     if(!success) {
@@ -25,51 +23,85 @@ static Enjam::utils::Path createDllCacheDir() {
   return path;
 }
 
-static void load(const std::string& path, Enjam::Context& context) {
-  static auto libLoader = Enjam::LibraryLoader { createDllCacheDir() };
-  libLoader.load(path, context);
+void onUnloadLib(Enjam::Library& lib) {
+  typedef void (*UnloadFunc)(Enjam::Application& app);
+  const std::string funcName = "unloadLib";
+  auto funcPtr = reinterpret_cast<UnloadFunc>(lib.getProcAddress(funcName));
+  if(!funcPtr) {
+    ENJAM_ERROR("Failed to find func {} in {}", funcName, lib.getPath().string());
+    return;
+  }
+
+  funcPtr(Enjam::Application::get());
+}
+
+void onLoadLib(Enjam::Library& lib) {
+  typedef void (*LoadFunc)(Enjam::Application& app);
+  const std::string funcName = "loadLib";
+  auto funcPtr = reinterpret_cast<LoadFunc>(lib.getProcAddress(funcName));
+  if(!funcPtr) {
+    ENJAM_ERROR("Failed to find func {} in {}", funcName, lib.getPath().string());
+    return;
+  }
+
+  funcPtr(Enjam::Application::get());
 }
 
 int main(int argc, char* argv[]) {
   std::filesystem::path exePath = argv[0];
-  std::string libPath = Enjam::utils::libPath(exePath.parent_path(), "game");
+  std::filesystem::path exeFolder = exePath.parent_path();
+  std::string libPath = Enjam::utils::libPath(exeFolder, "game");
 
-  auto context = Enjam::Context { };
+  auto libLoader = Enjam::LibraryLoader { createDllCacheDir(exeFolder), onLoadLib, onUnloadLib };
+  libLoader.load(libPath);
 
-  auto platform = context.getPlatform();
-  auto renderer = context.getRenderer();
-  auto input = context.getInput();
+  auto& app = Enjam::Application::get();
 
-  load(libPath, context);
+  auto platform = app.getPlatform();
+  auto input = app.getInput();
+  auto renderer = app.getRenderer();
 
-  bool isRunning = true;
-  input->onKeyPress().add([&](auto args) {
+  input->onKeyPress().add([&app](auto& args){
     using KeyCode = Enjam::KeyCode;
-    if(args.keyCode == KeyCode::R && args.super) {
-      load(libPath, context);
-    }
-
     if(args.keyCode == KeyCode::Escape) {
-      isRunning = false;
+      app.exit();
     }
   });
 
-  renderer->init();
-  context.createApp();
+  Enjam::RenderView renderView = { };
+  renderView.setScene(app.getScene());
+  renderView.setCamera(app.getCamera());
 
-  auto renderView = Enjam::RenderView { };
-  renderView.setCamera(context.getCamera());
-  renderView.setScene(context.getScene());
+  std::unique_ptr<Enjam::Simulation> sim { };
 
-  while(isRunning) {
+  auto setup = [&app, &sim](){
+    sim = app.createSimulation();
+    if(sim) {
+      sim->start();
+    }
+  };
+
+  auto cleanup = [&sim](){
+    if(sim) {
+      sim->stop();
+      sim.reset();
+    }
+  };
+
+  auto tick = [platform, input, renderer, &renderView, &sim](){
     platform->pollInputEvents(*input);
     input->update();
 
-    context.tickApp();
+    if(sim) {
+      sim->tick();
+    }
 
     renderer->draw(renderView);
-  }
+  };
 
-  context.destroyApp();
-  renderer->shutdown();
+  app.run(setup, cleanup, tick);
+  ENJAM_INFO("Application stopped running.");
+  app.setSimulationFactory(nullptr);
+  libLoader.unload(libPath);
+  return 0;
 }

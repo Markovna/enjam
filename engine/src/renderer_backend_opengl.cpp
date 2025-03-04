@@ -202,6 +202,8 @@ IndexBufferHandle RendererBackendOpengl::createIndexBuffer(uint32_t size) {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, GL_STATIC_DRAW);
   GL_CHECK_ERRORS();
 
+  ib->size = size;
+
   return ibh;
 }
 
@@ -311,6 +313,10 @@ void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, Index
 
   glBindBuffer(GL_ARRAY_BUFFER, vb->bufferId);
   updateVertexArray(vb->vertexArray);
+
+  if(indexCount == 0) {
+    indexCount = ib->size;
+  }
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->id);
   void* pointer = (void*) (uintptr_t) (OpenGL::indexOffsetToByteOffset(indexOffset));

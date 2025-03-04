@@ -100,8 +100,7 @@ int main(int argc, char* argv[]) {
   };
 
   app.run(setup, cleanup, tick);
-  ENJAM_INFO("Application stopped running.");
-  app.setSimulationFactory(nullptr);
+
   libLoader.unload(libPath);
   return 0;
 }

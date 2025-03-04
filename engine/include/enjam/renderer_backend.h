@@ -135,7 +135,7 @@ class ENJAM_API RendererBackend {
   virtual void beginFrame() = 0;
   virtual void endFrame() = 0;
 
-  virtual void draw(ProgramHandle, VertexBufferHandle, IndexBufferHandle, uint32_t indexCount, uint32_t indexOffset) = 0;
+  virtual void draw(ProgramHandle, VertexBufferHandle, IndexBufferHandle, uint32_t indexCount = 0, uint32_t indexOffset = 0) = 0;
 
   virtual ProgramHandle createProgram(ProgramData&) = 0;
   virtual void destroyProgram(ProgramHandle) = 0;

@@ -21,6 +21,8 @@ void Application::run(SetupCallback setup, CleanupCallback cleanup, TickCallback
   cleanup();
 
   renderer->shutdown();
+
+  mSimulationFactory = nullptr;
 }
 
 Application::Application() {
@@ -33,14 +35,13 @@ Application::Application() {
 }
 
 Application::~Application() {
-  ENJAM_INFO("Destroying application");
+  mSimulationFactory = nullptr;
   delete camera;
   delete scene;
   delete input;
   delete renderer;
   delete rendererBackend;
   delete platform;
-  ENJAM_INFO("Application destroyed!");
 }
 
 }

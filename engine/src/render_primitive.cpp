@@ -3,7 +3,7 @@
 namespace Enjam {
 
 IndexBuffer::IndexBuffer(renderer::RendererBackend& backend, size_t indexCount) {
-  uint8_t constexpr indexByteSize = 4;
+  uint8_t constexpr indexByteSize = sizeof(uint32_t);
   handle = backend.createIndexBuffer(indexCount * indexByteSize);
 }
 

@@ -24,18 +24,32 @@ class SandboxSimulation : public Enjam::Simulation {
       , scene(scene)
       {}
 
-  ~SandboxSimulation() {
-    ENJAM_INFO("~SandboxSimulation");
-  }
-
-  void start() {
+  void start() override {
     static const float vertexData[] {
-        -0.5f, 0.5f, 0.0f,
-        0.0f, -0.5f, 0.0f,
-        0.5f, 0.5f, 0.0f
+        -1, -1,  1,
+         1, -1,  1,
+        -1,  1,  1,
+         1,  1,  1,
+        -1, -1, -1,
+         1, -1, -1,
+        -1,  1, -1,
+         1,  1, -1
     };
 
-    static const uint32_t indexData[] { 0, 1, 2 };
+    static const uint32_t indexData[] {
+        2, 6, 7,
+        2, 3, 7,
+        0, 4, 5,
+        0, 1, 5,
+        0, 2, 6,
+        0, 4, 6,
+        1, 3, 7,
+        1, 5, 7,
+        0, 2, 3,
+        0, 1, 3,
+        4, 6, 7,
+        4, 5, 7
+    };
 
     vertexBuffer = new Enjam::VertexBuffer(
         rendererBackend,
@@ -50,12 +64,9 @@ class SandboxSimulation : public Enjam::Simulation {
             .stride = 3 * sizeof(float)
         });
 
-    vertexBuffer->setBuffer(
-        rendererBackend,
-        Enjam::renderer::BufferDataDesc{(void *) vertexData, sizeof(vertexData)},
-        0);
+    vertexBuffer->setBuffer(rendererBackend, Enjam::renderer::BufferDataDesc{(void *) vertexData, sizeof(vertexData)}, 0);
 
-    indexBuffer = new Enjam::IndexBuffer(rendererBackend, 3);
+    indexBuffer = new Enjam::IndexBuffer(rendererBackend, 36);
     indexBuffer->setBuffer(rendererBackend, Enjam::renderer::BufferDataDesc{(void *) indexData, sizeof(indexData)}, 0);
 
     std::ifstream vertexShaderFile("shaders/vertex.glsl");
@@ -73,7 +84,7 @@ class SandboxSimulation : public Enjam::Simulation {
         .setDescriptorBinding("perObject", 1);
 
     camera.projectionMatrix = Enjam::math::mat4f::perspective(60, 1.4, 0.1, 10);
-    camera.position = Enjam:: math::vec3f { 0, 0, -3 };
+    camera.position = Enjam:: math::vec3f { 0, 0, -8 };
     camera.front = Enjam::math::vec3f { 0, 0, 1 };
     camera.up = Enjam::math::vec3f { 0, 1, 0 };
 
@@ -84,14 +95,14 @@ class SandboxSimulation : public Enjam::Simulation {
     scene.getPrimitives().emplace_back( vertexBuffer, indexBuffer, programHandle );
 
     auto triangle = Enjam::RenderPrimitive { vertexBuffer, indexBuffer, programHandle };
-    triangle.setTransform(Enjam::math::mat4f::translation(Enjam::math::vec3f {1, 0, 0}));
+    triangle.setTransform(Enjam::math::mat4f::translation(Enjam::math::vec3f {4, 0, 0}));
 
     scene.getPrimitives().push_back(triangle);
 
     ENJAM_INFO("Simulation started!");
   }
 
-  void stop() {
+  void stop() override {
     auto& primitives = scene.getPrimitives();
     primitives.clear();
 
@@ -117,7 +128,7 @@ class SandboxSimulation : public Enjam::Simulation {
     ENJAM_INFO("Simulation stopped!");
   }
 
-  void tick() {
+  void tick() override {
 
   }
 
@@ -144,11 +155,11 @@ class SandboxSimulation : public Enjam::Simulation {
       }
 
       if(args.keyCode == KeyCode::Up) {
-        camera.position += Enjam::math::vec3f {0, 0, 0.1};
+        camera.position += Enjam::math::vec3f {0, -0.1, 0};
       }
 
       if(args.keyCode == KeyCode::Down) {
-        camera.position += Enjam::math::vec3f {0, 0, -0.1};
+        camera.position += Enjam::math::vec3f {0, 0.1, 0};
       }
     }};
 };
@@ -164,6 +175,7 @@ void loadLib(Enjam::Application& app) {
     return std::make_unique<SandboxSimulation>(renderer, input, rendererBackend, camera, scene);
   });
 
+  ENJAM_INFO("Game loaded!");
 };
 
 void unloadLib(Enjam::Application& app) {

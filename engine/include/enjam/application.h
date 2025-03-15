@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <utility>
+#include <enjam/di.h>
 
 namespace Enjam {
 
@@ -27,43 +28,17 @@ class Simulation {
 
 class Application final {
  public:
-  using SimulationFactory = std::function<std::unique_ptr<Simulation>()>;
   using SetupCallback = std::function<void()>;
   using CleanupCallback = std::function<void()>;
   using TickCallback = std::function<void()>;
 
-  static Application& get() {
-    static Application instance;
-    return instance;
-  }
-
   ~Application();
+  Application();
 
   void run(SetupCallback, CleanupCallback, TickCallback);
   void exit() { exitRequested = true; }
 
-  void setSimulationFactory(SimulationFactory simulationFactory) { mSimulationFactory = std::move(simulationFactory); }
-  std::unique_ptr<Simulation> createSimulation() { return mSimulationFactory(); }
-
-  Platform* getPlatform() { return platform; }
-  Input* getInput() { return input; }
-  Renderer* getRenderer() { return renderer; }
-  renderer::RendererBackend* getRendererBackend() { return rendererBackend; }
-  Scene* getScene() { return scene; }
-  Camera* getCamera() { return camera; }
-
  private:
-  Application();
-
- private:
-  SimulationFactory mSimulationFactory = nullptr;
-  Platform* platform = nullptr;
-  Input* input = nullptr;
-  Renderer* renderer = nullptr;
-  renderer::RendererBackend* rendererBackend = nullptr;
-  Scene* scene = nullptr;
-  Camera* camera = nullptr;
-
   bool exitRequested = false;
 };
 

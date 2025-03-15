@@ -33,7 +33,9 @@ set(ENJAM_HEADERS
         include/enjam/renderer_backend_type.h
         include/enjam/render_primitive.h
         include/enjam/scene.h
-        include/enjam/utils.h include/enjam/application.h)
+        include/enjam/utils.h
+        include/enjam/dependencies.h
+        include/enjam/application.h)
 
 add_library(enjam STATIC ${ENJAM_SOURCES} ${ENJAM_HEADERS})
 
@@ -42,3 +44,4 @@ target_include_directories(enjam PUBLIC include)
 target_link_libraries(enjam PUBLIC fmt)
 target_link_libraries(enjam PRIVATE glfw)
 target_link_libraries(enjam PRIVATE glad)
+target_link_libraries(enjam PUBLIC enjector)

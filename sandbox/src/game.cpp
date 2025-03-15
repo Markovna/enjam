@@ -164,21 +164,14 @@ class SandboxSimulation : public Enjam::Simulation {
     }};
 };
 
-void loadLib(Enjam::Application& app) {
-  auto& renderer = *app.getRenderer();
-  auto& input = *app.getInput();
-  auto& rendererBackend = *app.getRendererBackend();
-  auto& camera = *app.getCamera();
-  auto& scene = *app.getScene();
+void loadLib(Enjam::Dependencies& dependencies) {
 
-  app.setSimulationFactory([&renderer, &input, &rendererBackend, &camera, &scene]() {
-    return std::make_unique<SandboxSimulation>(renderer, input, rendererBackend, camera, scene);
-  });
+  dependencies.bind<enjector::IFactory<Enjam::Simulation>>().to<enjector::Factory<SandboxSimulation(), Enjam::Renderer&, Enjam::Input&, Enjam::renderer::RendererBackend&, Enjam::Camera&, Enjam::Scene&>>();
 
   ENJAM_INFO("Game loaded!");
 };
 
-void unloadLib(Enjam::Application& app) {
+void unloadLib(Enjam::Dependencies& dependencies) {
 
   ENJAM_INFO("Game unloaded!");
 }

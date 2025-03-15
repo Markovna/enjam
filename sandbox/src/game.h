@@ -1,6 +1,6 @@
 #pragma once
 
-#include <enjam/application.h>
+#include <enjam/dependencies.h>
 
-extern "C" void loadLib(Enjam::Application& app);
-extern "C" void unloadLib(Enjam::Application& app);
+extern "C" void loadLib(Enjam::Dependencies&);
+extern "C" void unloadLib(Enjam::Dependencies&);

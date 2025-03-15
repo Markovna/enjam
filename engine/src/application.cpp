@@ -8,8 +8,6 @@
 namespace Enjam {
 
 void Application::run(SetupCallback setup, CleanupCallback cleanup, TickCallback tick) {
-  renderer->init();
-
   setup();
 
   while(!exitRequested) {
@@ -19,29 +17,13 @@ void Application::run(SetupCallback setup, CleanupCallback cleanup, TickCallback
   }
 
   cleanup();
-
-  renderer->shutdown();
-
-  mSimulationFactory = nullptr;
 }
 
 Application::Application() {
-  platform = new PlatformGlfw;
-  rendererBackend = platform->createRendererBackend();
-  renderer = new Renderer(*rendererBackend);
-  input = new Input;
-  scene = new Scene;
-  camera = new Camera;
+
 }
 
 Application::~Application() {
-  mSimulationFactory = nullptr;
-  delete camera;
-  delete scene;
-  delete input;
-  delete renderer;
-  delete rendererBackend;
-  delete platform;
 }
 
 }

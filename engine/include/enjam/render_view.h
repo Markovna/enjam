@@ -8,8 +8,7 @@
 
 namespace Enjam {
 
-class Camera {
- public:
+struct Camera {
   math::mat4f projectionMatrix;
   math::mat4f viewMatrix;
   math::vec3f position;

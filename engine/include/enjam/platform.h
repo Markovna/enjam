@@ -3,14 +3,8 @@
 
 #include <enjam/defines.h>
 #include <enjam/renderer_backend_type.h>
+#include <memory>
 
-//#if defined(ENJAM_PLATFORM_WINDOWS)
-//#include <enjam/platform_glfw.h>
-//
-//#elif defined(ENJAM_PLATFORM_DARWIN)
-//#include <enjam/platform_glfw.h>
-//
-//#endif
 
 namespace Enjam {
 
@@ -24,7 +18,7 @@ class Platform {
  public:
   virtual ~Platform() = default;
 
-  virtual renderer::RendererBackend* createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT) = 0;
+  virtual std::unique_ptr<renderer::RendererBackend> createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT) = 0;
   virtual void pollInputEvents(Input&) = 0;
 
  protected:

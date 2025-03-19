@@ -13,7 +13,7 @@ PlatformGlfw::PlatformGlfw()
   init();
 }
 
-renderer::RendererBackend* PlatformGlfw::createRendererBackend(RendererBackendType type) {
+std::unique_ptr<renderer::RendererBackend> PlatformGlfw::createRendererBackend(RendererBackendType type) {
   ENJAM_ASSERT(window);
 
   switch (type) {
@@ -23,14 +23,14 @@ renderer::RendererBackend* PlatformGlfw::createRendererBackend(RendererBackendTy
           .makeCurrent = [win = window]() { glfwMakeContextCurrent(win); },
           .swapBuffers = [win = window]() { glfwSwapBuffers(win); }
       };
-      return new renderer::RendererBackendOpengl((renderer::GLLoaderProc) glfwGetProcAddress, swapChain);
+      return std::make_unique<renderer::RendererBackendOpengl>((renderer::GLLoaderProc) glfwGetProcAddress, swapChain);
     }
     case VULKAN:
       ENJAM_ERROR("VULKAN renderer backend is not supported for current platform.");
-      return nullptr;
+      return { };
     case DIRECTX:
       ENJAM_ERROR("DIRECTX renderer backend is not supported for current platform.");
-      return nullptr;
+      return { };
   }
 }
 

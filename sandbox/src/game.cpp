@@ -7,6 +7,7 @@
 #include <enjam/renderer.h>
 #include <enjam/input.h>
 #include <enjam/math.h>
+#include <njctr/njctr.h>
 #include <fstream>
 #include <sstream>
 
@@ -164,14 +165,14 @@ class SandboxSimulation : public Enjam::Simulation {
     }};
 };
 
-void loadLib(Enjam::Dependencies& dependencies) {
+void loadLib(Enjam::Injector& injector) {
 
-  dependencies.bind<enjector::IFactory<Enjam::Simulation>>().to<enjector::Factory<SandboxSimulation(), Enjam::Renderer&, Enjam::Input&, Enjam::renderer::RendererBackend&, Enjam::Camera&, Enjam::Scene&>>();
+  injector.bind<njctr::IFactory<Enjam::Simulation()>>().to<njctr::Factory<SandboxSimulation(Enjam::Renderer&, Enjam::Input&, Enjam::renderer::RendererBackend&, Enjam::Camera&, Enjam::Scene&)>>();
 
   ENJAM_INFO("Game loaded!");
 };
 
-void unloadLib(Enjam::Dependencies& dependencies) {
+void unloadLib(Enjam::Injector&) {
 
   ENJAM_INFO("Game unloaded!");
 }

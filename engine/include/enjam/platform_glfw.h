@@ -2,6 +2,7 @@
 #define INCLUDE_ENJAM_PLATFORM_GLFW_H_
 
 #include <enjam/platform.h>
+#include <memory>
 
 class GLFWwindow;
 
@@ -10,7 +11,7 @@ namespace Enjam {
 class ENJAM_API PlatformGlfw : public Platform {
  public:
   PlatformGlfw();
-  renderer::RendererBackend* createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT) override;
+  std::unique_ptr<renderer::RendererBackend> createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT) override;
   void pollInputEvents(Input& input) override;
   void shutdown();
 

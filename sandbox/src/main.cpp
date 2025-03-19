@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 
   auto app = std::make_shared<Enjam::Application>();
   auto platform = std::make_shared<Enjam::PlatformGlfw>();
-  std::shared_ptr<Enjam::renderer::RendererBackend> rendererBackend = platform->createRendererBackend();
+  std::shared_ptr<Enjam::RendererBackend> rendererBackend = platform->createRendererBackend();
   auto renderer = std::make_shared<Enjam::Renderer>(*rendererBackend);
   auto input = std::make_shared<Enjam::Input>();
   auto scene = std::make_shared<Enjam::Scene>();
@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
   auto setupDependencies = [&]() {
     injector.bind<Enjam::Renderer>().to(renderer);
     injector.bind<Enjam::Input>().to(input);
-    injector.bind<Enjam::renderer::RendererBackend>().to(rendererBackend);
+    injector.bind<Enjam::RendererBackend>().to(rendererBackend);
     injector.bind<Enjam::Scene>().to(scene);
     injector.bind<Enjam::Camera>().to(camera);
   };
@@ -89,7 +89,6 @@ int main(int argc, char* argv[]) {
     }
 
     if(args.keyCode == KeyCode::R && args.super) {
-      ENJAM_INFO("Requested hot reload");
       hotReload = true;
     }
   });

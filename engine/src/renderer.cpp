@@ -15,17 +15,17 @@ void Renderer::init() {
   bool initialized = rendererBackend.init();
   ENJAM_ASSERT(initialized && "Failed to initialize renderer backend.");
 
-  viewDescriptorSetHandle = rendererBackend.createDescriptorSet(renderer::DescriptorSetData {
+  viewDescriptorSetHandle = rendererBackend.createDescriptorSet(DescriptorSetData {
       .bindings {
-          { .binding = 0, .type = renderer::DescriptorType::UNIFORM_BUFFER },
-          { .binding = 1, .type = renderer::DescriptorType::UNIFORM_BUFFER }
+          { .binding = 0, .type = DescriptorType::UNIFORM_BUFFER },
+          { .binding = 1, .type = DescriptorType::UNIFORM_BUFFER }
       }
   });
 
-  viewUniformBufferHandle = rendererBackend.createBufferData(sizeof(PerViewUniforms), renderer::BufferTargetBinding::UNIFORM);
+  viewUniformBufferHandle = rendererBackend.createBufferData(sizeof(PerViewUniforms), BufferTargetBinding::UNIFORM);
   rendererBackend.updateDescriptorSetBuffer(viewDescriptorSetHandle, 0, viewUniformBufferHandle, sizeof(PerViewUniforms), 0);
 
-  objectsUniformBufferHandle = rendererBackend.createBufferData(sizeof(PerObjectUniforms), renderer::BufferTargetBinding::UNIFORM);
+  objectsUniformBufferHandle = rendererBackend.createBufferData(sizeof(PerObjectUniforms), BufferTargetBinding::UNIFORM);
   rendererBackend.updateDescriptorSetBuffer(viewDescriptorSetHandle, 1, objectsUniformBufferHandle, sizeof(PerObjectUniforms), 0);
 }
 

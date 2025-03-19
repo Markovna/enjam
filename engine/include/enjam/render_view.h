@@ -38,8 +38,8 @@ class RenderView {
   friend class Renderer;
 
   void prepareBuffers();
-  void updateViewUniformBuffer(renderer::RendererBackend& backend, renderer::BufferDataHandle);
-  void updateObjectUniformBuffer(renderer::RendererBackend& backend, renderer::BufferDataHandle, uint32_t primitiveIndex);
+  void updateViewUniformBuffer(RendererBackend& backend, BufferDataHandle);
+  void updateObjectUniformBuffer(RendererBackend& backend, BufferDataHandle, uint32_t primitiveIndex);
 
  private:
   using PerObjectUniformBufferData = std::vector<PerObjectUniforms>;

@@ -10,7 +10,7 @@
 #include <utility>
 #include "program.h"
 
-namespace Enjam::renderer {
+namespace Enjam {
 
 enum class VertexAttributeType : uint8_t {
   FLOAT,
@@ -63,17 +63,17 @@ struct DescriptorSetData {
   BindingsArray bindings;
 };
 
-struct VertexBuffer {};
-struct IndexBuffer {};
-struct Program {};
-struct DescriptorSet {};
-struct BufferData {};
+struct VertexBufferHW {};
+struct IndexBufferHW {};
+struct ProgramHW {};
+struct DescriptorSetHW {};
+struct BufferDataHW {};
 
-using VertexBufferHandle = Handle<VertexBuffer>;
-using IndexBufferHandle = Handle<IndexBuffer>;
-using ProgramHandle = Handle<Program>;
-using DescriptorSetHandle = Handle<DescriptorSet>;
-using BufferDataHandle = Handle<BufferData>;
+using VertexBufferHandle = Handle<VertexBufferHW>;
+using IndexBufferHandle = Handle<IndexBufferHW>;
+using ProgramHandle = Handle<ProgramHW>;
+using DescriptorSetHandle = Handle<DescriptorSetHW>;
+using BufferDataHandle = Handle<BufferDataHW>;
 
 struct VertexAttribute {
   static constexpr uint32_t FLAG_ENABLED = 0x01;

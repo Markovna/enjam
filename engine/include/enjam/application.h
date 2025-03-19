@@ -13,10 +13,7 @@ class Input;
 class Scene;
 class Camera;
 class RenderView;
-
-namespace renderer {
 class RendererBackend;
-}
 
 class Simulation {
  public:

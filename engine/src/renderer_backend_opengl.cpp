@@ -7,7 +7,7 @@
 
 #include "opengl_types.h"
 
-namespace Enjam::renderer {
+namespace Enjam {
 
 #define GL_API_DEBUG 1
 

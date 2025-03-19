@@ -15,7 +15,7 @@ class SandboxSimulation : public Enjam::Simulation {
  public:
   SandboxSimulation(Enjam::Renderer &renderer,
                     Enjam::Input &input,
-                    Enjam::renderer::RendererBackend &rendererBackend,
+                    Enjam::RendererBackend &rendererBackend,
                     Enjam::Camera &camera,
                     Enjam::Scene &scene)
       : renderer(renderer)
@@ -54,21 +54,21 @@ class SandboxSimulation : public Enjam::Simulation {
 
     vertexBuffer = new Enjam::VertexBuffer(
         rendererBackend,
-        Enjam::renderer::VertexArrayDesc{
+        Enjam::VertexArrayDesc{
             .attributes = {
-                Enjam::renderer::VertexAttribute{
-                    .type = Enjam::renderer::VertexAttributeType::FLOAT3,
-                    .flags = Enjam::renderer::VertexAttribute::FLAG_ENABLED,
+                Enjam::VertexAttribute{
+                    .type = Enjam::VertexAttributeType::FLOAT3,
+                    .flags = Enjam::VertexAttribute::FLAG_ENABLED,
                     .offset = 0
                 }
             },
             .stride = 3 * sizeof(float)
         });
 
-    vertexBuffer->setBuffer(rendererBackend, Enjam::renderer::BufferDataDesc{(void *) vertexData, sizeof(vertexData)}, 0);
+    vertexBuffer->setBuffer(rendererBackend, Enjam::BufferDataDesc{(void *) vertexData, sizeof(vertexData)}, 0);
 
     indexBuffer = new Enjam::IndexBuffer(rendererBackend, 36);
-    indexBuffer->setBuffer(rendererBackend, Enjam::renderer::BufferDataDesc{(void *) indexData, sizeof(indexData)}, 0);
+    indexBuffer->setBuffer(rendererBackend, Enjam::BufferDataDesc{(void *) indexData, sizeof(indexData)}, 0);
 
     std::ifstream vertexShaderFile("shaders/vertex.glsl");
     std::stringstream vertexShaderStrBuffer;
@@ -136,13 +136,13 @@ class SandboxSimulation : public Enjam::Simulation {
  private:
   Enjam::Renderer& renderer;
   Enjam::Input& input;
-  Enjam::renderer::RendererBackend& rendererBackend;
+  Enjam::RendererBackend& rendererBackend;
   Enjam::Camera& camera;
   Enjam::Scene& scene;
 
   Enjam::VertexBuffer* vertexBuffer = nullptr;
   Enjam::IndexBuffer* indexBuffer = nullptr;
-  Enjam::renderer::ProgramHandle programHandle = { };
+  Enjam::ProgramHandle programHandle = { };
 
   Enjam::KeyPressEvent::EventHandler onKeyPress = Enjam::KeyPressEvent::EventHandler {
     [this](const Enjam::KeyPressEventArgs& args) {
@@ -167,7 +167,7 @@ class SandboxSimulation : public Enjam::Simulation {
 
 void loadLib(Enjam::Injector& injector) {
 
-  injector.bind<njctr::IFactory<Enjam::Simulation()>>().to<njctr::Factory<SandboxSimulation(Enjam::Renderer&, Enjam::Input&, Enjam::renderer::RendererBackend&, Enjam::Camera&, Enjam::Scene&)>>();
+  injector.bind<njctr::IFactory<Enjam::Simulation()>>().to<njctr::Factory<SandboxSimulation(Enjam::Renderer&, Enjam::Input&, Enjam::RendererBackend&, Enjam::Camera&, Enjam::Scene&)>>();
 
   ENJAM_INFO("Game loaded!");
 };

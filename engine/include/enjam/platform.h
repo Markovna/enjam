@@ -9,16 +9,13 @@
 namespace Enjam {
 
 class Input;
-
-namespace renderer {
 class RendererBackend;
-}
 
 class Platform {
  public:
   virtual ~Platform() = default;
 
-  virtual std::unique_ptr<renderer::RendererBackend> createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT) = 0;
+  virtual std::unique_ptr<RendererBackend> createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT) = 0;
   virtual void pollInputEvents(Input&) = 0;
 
  protected:

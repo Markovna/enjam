@@ -2,24 +2,24 @@
 
 namespace Enjam {
 
-IndexBuffer::IndexBuffer(renderer::RendererBackend& backend, size_t indexCount) {
+IndexBuffer::IndexBuffer(RendererBackend& backend, size_t indexCount) {
   uint8_t constexpr indexByteSize = sizeof(uint32_t);
   handle = backend.createIndexBuffer(indexCount * indexByteSize);
 }
 
-void IndexBuffer::setBuffer(renderer::RendererBackend& backend, renderer::BufferDataDesc&& desc, uint32_t byteOffset) {
+void IndexBuffer::setBuffer(RendererBackend& backend, BufferDataDesc&& desc, uint32_t byteOffset) {
   backend.updateIndexBuffer(handle, std::move(desc), byteOffset);
 }
 
-void IndexBuffer::destroy(renderer::RendererBackend& backend) {
+void IndexBuffer::destroy(RendererBackend& backend) {
   backend.destroyIndexBuffer(handle);
 }
 
-VertexBuffer::VertexBuffer(renderer::RendererBackend& backend, renderer::VertexArrayDesc&& desc) {
+VertexBuffer::VertexBuffer(RendererBackend& backend, VertexArrayDesc&& desc) {
   handle = backend.createVertexBuffer(std::move(desc));
 }
 
-void VertexBuffer::setBuffer(renderer::RendererBackend& backend, BufferObject& buffer) {
+void VertexBuffer::setBuffer(RendererBackend& backend, BufferObject& buffer) {
   if(bufferDataHandle && (flags & VertexBuffer::FLAG_DESTROY_BUFFER_OBJECT)) {
     backend.destroyBufferData(bufferDataHandle);
   }
@@ -29,18 +29,18 @@ void VertexBuffer::setBuffer(renderer::RendererBackend& backend, BufferObject& b
   flags &= ~VertexBuffer::FLAG_DESTROY_BUFFER_OBJECT;
 }
 
-void VertexBuffer::setBuffer(renderer::RendererBackend& backend, renderer::BufferDataDesc&& desc, uint32_t offset) {
+void VertexBuffer::setBuffer(RendererBackend& backend, BufferDataDesc&& desc, uint32_t offset) {
   if(bufferDataHandle && (flags & VertexBuffer::FLAG_DESTROY_BUFFER_OBJECT)) {
     backend.destroyBufferData(bufferDataHandle);
   }
 
-  bufferDataHandle = backend.createBufferData(desc.size, renderer::BufferTargetBinding::VERTEX);
+  bufferDataHandle = backend.createBufferData(desc.size, BufferTargetBinding::VERTEX);
   backend.updateBufferData(bufferDataHandle, std::move(desc), offset);
   backend.assignVertexBufferData(handle, bufferDataHandle);
   flags |= VertexBuffer::FLAG_DESTROY_BUFFER_OBJECT;
 }
 
-void VertexBuffer::destroy(renderer::RendererBackend& backend) {
+void VertexBuffer::destroy(RendererBackend& backend) {
   if(handle) {
     backend.destroyVertexBuffer(handle);
   }
@@ -50,15 +50,15 @@ void VertexBuffer::destroy(renderer::RendererBackend& backend) {
   }
 }
 
-BufferObject::BufferObject(renderer::RendererBackend& backend, renderer::BufferTargetBinding binding, size_t size) {
+BufferObject::BufferObject(RendererBackend& backend, BufferTargetBinding binding, size_t size) {
   handle = backend.createBufferData(size, binding);
 }
 
-void BufferObject::setBuffer(renderer::RendererBackend& backend, renderer::BufferDataDesc&& desc, uint32_t offset) {
+void BufferObject::setBuffer(RendererBackend& backend, BufferDataDesc&& desc, uint32_t offset) {
   backend.updateBufferData(handle, std::move(desc), offset);
 }
 
-void BufferObject::destroy(renderer::RendererBackend& backend) {
+void BufferObject::destroy(RendererBackend& backend) {
   backend.destroyBufferData(handle);
 }
 

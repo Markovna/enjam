@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <glad/glad.h>
 
-namespace Enjam::renderer {
+namespace Enjam {
 
 typedef void* (*GLLoaderProc)(const char *name);
 
@@ -19,21 +19,21 @@ struct GLSwapChain {
   SwapBuffersFunc swapBuffers;
 };
 
-struct GLProgram : public Program {
+struct GLProgram : public ProgramHW {
   GLuint id = 0;
 };
 
-struct GLVertexBuffer : public VertexBuffer {
+struct GLVertexBuffer : public VertexBufferHW {
   GLuint bufferId = 0;
   VertexArrayDesc vertexArray;
 };
 
-struct GLIndexBuffer : public IndexBuffer {
+struct GLIndexBuffer : public IndexBufferHW {
   GLuint id = 0;
   uint32_t size = 0;
 };
 
-struct GLBufferData : public BufferData {
+struct GLBufferData : public BufferDataHW {
   GLuint id = 0;
   uint32_t size = 0;
   GLenum target = 0; // GL_UNIFORM_BUFFER / GL_ARRAY_BUFFER
@@ -55,7 +55,7 @@ struct GLDescriptorNone {};
 
 using GLDescriptor = std::variant<GLDescriptorNone, GLDescriptorBuffer, GLDescriptorTexture>;
 
-struct GLDescriptorSet : public DescriptorSet {
+struct GLDescriptorSet : public DescriptorSetHW {
   explicit GLDescriptorSet(DescriptorSetData &&data) noexcept {
     std::sort(data.bindings.begin(), data.bindings.end(), [](auto &&lhs, auto &&rhs) {
       return lhs.binding < rhs.binding;

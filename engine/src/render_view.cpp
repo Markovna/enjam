@@ -19,11 +19,11 @@ void RenderView::prepareBuffers() {
   }
 }
 
-void RenderView::updateViewUniformBuffer(renderer::RendererBackend& rendererBackend, renderer::BufferDataHandle handle) {
+void RenderView::updateViewUniformBuffer(RendererBackend& rendererBackend, BufferDataHandle handle) {
   rendererBackend.updateBufferData(handle, { &perViewUniformBufferData, sizeof(perViewUniformBufferData) }, 0);
 }
 
-void RenderView::updateObjectUniformBuffer(renderer::RendererBackend& rendererBackend, renderer::BufferDataHandle handle, uint32_t primitiveIndex) {
+void RenderView::updateObjectUniformBuffer(RendererBackend& rendererBackend, BufferDataHandle handle, uint32_t primitiveIndex) {
   rendererBackend.updateBufferData(handle, { &perObjectUniformBufferData[primitiveIndex], sizeof(PerObjectUniforms) }, 0);
 }
 

@@ -12,17 +12,10 @@
 namespace Enjam {
 
 class RenderView;
-
-namespace renderer {
-
 class RendererBackend;
-
-}
 
 class ENJAM_API Renderer final {
  public:
-  using RendererBackend = renderer::RendererBackend;
-
   explicit Renderer(RendererBackend& backend);
   ~Renderer() = default;
   void init();
@@ -32,9 +25,9 @@ class ENJAM_API Renderer final {
  private:
   RendererBackend& rendererBackend;
 
-  renderer::DescriptorSetHandle viewDescriptorSetHandle;
-  renderer::BufferDataHandle objectsUniformBufferHandle;
-  renderer::BufferDataHandle viewUniformBufferHandle;
+  DescriptorSetHandle viewDescriptorSetHandle;
+  BufferDataHandle objectsUniformBufferHandle;
+  BufferDataHandle viewUniformBufferHandle;
 };
 
 }

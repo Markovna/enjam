@@ -4,7 +4,7 @@
 #include <enjam/renderer_backend.h>
 #include <glad/glad.h>
 
-namespace Enjam::renderer::OpenGL {
+namespace Enjam::OpenGL {
 
 constexpr inline GLboolean toGLBoolean(bool value) {
   return value ? GL_TRUE : GL_FALSE;

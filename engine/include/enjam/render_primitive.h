@@ -8,55 +8,53 @@ namespace Enjam {
 
 class IndexBuffer {
  public:
-  using IndexBufferHandle = renderer::IndexBufferHandle;
-  IndexBuffer(renderer::RendererBackend&, size_t indexCount);
-  void setBuffer(renderer::RendererBackend&, renderer::BufferDataDesc&& desc, uint32_t byteOffset);
-  void destroy(renderer::RendererBackend&);
+  IndexBuffer(RendererBackend&, size_t indexCount);
+  void setBuffer(RendererBackend&, BufferDataDesc&& desc, uint32_t byteOffset);
+  void destroy(RendererBackend&);
   IndexBufferHandle& getHandle() { return handle; }
 
  private:
-  renderer::IndexBufferHandle handle;
+  IndexBufferHandle handle;
 };
 
 class BufferObject;
 
 class VertexBuffer {
  public:
-  using VertexBufferHandle = renderer::VertexBufferHandle;
 
-  VertexBuffer(renderer::RendererBackend&, renderer::VertexArrayDesc&&);
-  void setBuffer(renderer::RendererBackend&, renderer::BufferDataDesc&&, uint32_t offset);
-  void setBuffer(renderer::RendererBackend&, BufferObject&);
-  void destroy(renderer::RendererBackend&);
+  VertexBuffer(RendererBackend&, VertexArrayDesc&&);
+  void setBuffer(RendererBackend&, BufferDataDesc&&, uint32_t offset);
+  void setBuffer(RendererBackend&, BufferObject&);
+  void destroy(RendererBackend&);
   VertexBufferHandle getHandle() { return handle; }
 
  private:
   static constexpr uint8_t FLAG_DESTROY_BUFFER_OBJECT = 0x01;
 
-  renderer::VertexBufferHandle handle;
-  renderer::BufferDataHandle bufferDataHandle;
+  VertexBufferHandle handle;
+  BufferDataHandle bufferDataHandle;
   uint8_t flags;
 };
 
 class BufferObject {
  public:
-  using BufferObjectHandle = renderer::BufferDataHandle;
+  using BufferObjectHandle = BufferDataHandle;
 
-  BufferObject(renderer::RendererBackend&, renderer::BufferTargetBinding, size_t);
-  void setBuffer(renderer::RendererBackend&, renderer::BufferDataDesc&&, uint32_t offset);
-  void destroy(renderer::RendererBackend&);
+  BufferObject(RendererBackend&, BufferTargetBinding, size_t);
+  void setBuffer(RendererBackend&, BufferDataDesc&&, uint32_t offset);
+  void destroy(RendererBackend&);
 
   BufferObjectHandle getHandle() { return handle; }
-  renderer::BufferTargetBinding getBinding() { return binding; }
+  BufferTargetBinding getBinding() { return binding; }
 
  private:
-  renderer::BufferDataHandle handle;
-  renderer::BufferTargetBinding binding;
+  BufferDataHandle handle;
+  BufferTargetBinding binding;
 };
 
 class RenderPrimitive {
  public:
-  RenderPrimitive(VertexBuffer* vertexBuffer = nullptr, IndexBuffer* indexBuffer = nullptr, renderer::ProgramHandle programHandle = { })
+  RenderPrimitive(VertexBuffer* vertexBuffer = nullptr, IndexBuffer* indexBuffer = nullptr, ProgramHandle programHandle = { })
     : vertexBuffer(vertexBuffer), indexBuffer(indexBuffer), programHandle(programHandle), transform(1)
   { }
 
@@ -66,8 +64,8 @@ class RenderPrimitive {
   void setVertexBuffer(VertexBuffer* buffer) { vertexBuffer = buffer; }
   void setIndexBuffer(IndexBuffer* buffer) { indexBuffer = buffer; }
 
-  renderer::ProgramHandle getProgramHandle() { return programHandle; }
-  void setProgramHandle(renderer::ProgramHandle handle) { programHandle = handle; }
+  ProgramHandle getProgramHandle() { return programHandle; }
+  void setProgramHandle(ProgramHandle handle) { programHandle = handle; }
 
   const math::mat4f& getTransform() const { return transform; }
   void setTransform(math::mat4f&& tr) { transform = tr; }
@@ -75,7 +73,7 @@ class RenderPrimitive {
  private:
   VertexBuffer* vertexBuffer;
   IndexBuffer* indexBuffer;
-  renderer::ProgramHandle programHandle;
+  ProgramHandle programHandle;
   math::mat4f transform;
 };
 

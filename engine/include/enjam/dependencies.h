@@ -13,7 +13,7 @@ using Injector = njctr::Injector<
     IFactory<Simulation()>,
     njctr::SharedResolver<Renderer>,
     njctr::SharedResolver<Input>,
-    njctr::SharedResolver<renderer::RendererBackend>,
+    njctr::SharedResolver<RendererBackend>,
     njctr::SharedResolver<Scene>,
     njctr::SharedResolver<Camera>>;
 }

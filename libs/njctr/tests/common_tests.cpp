@@ -3,19 +3,35 @@
 
 using namespace njctr;
 
-struct interface1 { virtual ~interface1() = default; };
-struct interface2 { virtual ~interface2() = default;};
-struct interface3 { virtual ~interface3() = default;};
+struct interface1 {
+  virtual void dummy() = 0;
+  virtual ~interface1() = default;
+};
+
+struct interface2 {
+  virtual void dummy() = 0;
+  virtual ~interface2() = default;};
+
+struct interface3 {
+  virtual void dummy() = 0;
+  virtual ~interface3() = default;
+};
 
 struct impl1_without_deps : interface1 {
   impl1_without_deps() = default;
-  impl1_without_deps(int) { }
+  explicit impl1_without_deps(int value) : value(value) { }
+
+  void dummy() override { }
+  int value = 0;
 };
 
 struct impl1_with_deps : interface1 {
   explicit impl1_with_deps(interface2&) { }
-  explicit impl1_with_deps(interface2&, int) { }
   explicit impl1_with_deps(interface3&) { }
+  impl1_with_deps(interface2&, int value) : value(value) { }
+
+  void dummy() override { }
+  int value = 0;
 };
 
 Test test_shared_resolved_types = [] {
@@ -42,7 +58,7 @@ Test test_factory_without_args_resolved_types = [] {
     auto factory = injector.resolve<IFactory<interface1()>>();
     auto product = factory();
     static_assert(std::is_same_v<decltype(product), std::unique_ptr<interface1>>);
-    assert(dynamic_cast<impl1_without_deps *>(product.get()));
+    assert(dynamic_cast<impl1_without_deps*>(product.get()));
   }
 
   injector.bind<IFactory<interface1()>>().to<Factory<impl1_with_deps(interface2&)>>();
@@ -61,7 +77,8 @@ Test test_factory_with_args_resolved_types = [] {
     auto factory = injector.resolve<IFactory<interface1(int)>>();
     auto product = factory(42);
     static_assert(std::is_same_v<decltype(product), std::unique_ptr<interface1>>);
-    assert(dynamic_cast<impl1_without_deps *>(product.get()));
+    assert(dynamic_cast<impl1_without_deps*>(product.get()));
+    assert(dynamic_cast<impl1_without_deps*>(product.get())->value == 42);
   }
 
   injector.bind<IFactory<interface1(int)>>().to<Factory<impl1_with_deps(interface2&), int>>();
@@ -70,6 +87,7 @@ Test test_factory_with_args_resolved_types = [] {
     auto product = factory(42);
     static_assert(std::is_same_v<decltype(product), std::unique_ptr<interface1>>);
     assert(dynamic_cast<impl1_with_deps*>(product.get()));
+    assert(dynamic_cast<impl1_with_deps*>(product.get())->value == 42);
   }
 };
 

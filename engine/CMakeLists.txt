@@ -35,7 +35,8 @@ set(ENJAM_HEADERS
         include/enjam/scene.h
         include/enjam/utils.h
         include/enjam/dependencies.h
-        include/enjam/application.h)
+        include/enjam/application.h
+        include/enjam/simulation.h)
 
 add_library(enjam STATIC ${ENJAM_SOURCES} ${ENJAM_HEADERS})
 

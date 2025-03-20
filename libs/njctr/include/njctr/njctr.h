@@ -1,13 +1,12 @@
-#ifndef INCLUDE_ENJECTOR_DEPENDENCIES_H_
-#define INCLUDE_ENJECTOR_DEPENDENCIES_H_
+#ifndef INCLUDE_NJCTR_NJCTR_H_
+#define INCLUDE_NJCTR_NJCTR_H_
 
 #include <functional>
 
 namespace njctr {
 
 template<class TResolver, class TInjector, class TExpected, class = void>
-struct HasResolve : std::false_type {
-};
+struct HasResolve : std::false_type { };
 
 template<class TResolver, class TInjector, class TExpected>
 struct HasResolve<TResolver, TInjector, TExpected,
@@ -15,9 +14,7 @@ struct HasResolve<TResolver, TInjector, TExpected,
   : std::true_type { };
 
 template<class T, class = void>
-struct HasBindType : std::false_type {
-
-};
+struct HasBindType : std::false_type { };
 
 template<class T>
 struct HasBindType<T, typename std::void_t<typename T::BindType>> : std::true_type {};
@@ -27,7 +24,7 @@ struct IsBindable : std::false_type { };
 
 template<class TBindType, class TResolver>
 struct IsBindable<TBindType, TResolver, std::enable_if_t<HasBindType<TResolver>::value, void>>
-    : std::integral_constant<bool, std::is_same_v<TBindType, typename TResolver::BindType>>
+    : std::is_same<TBindType, typename TResolver::BindType>
 { };
 
 template<class TResolver>
@@ -274,4 +271,4 @@ class IFactory<TProduct(TArgs...)> {
 
 }
 
-#endif //INCLUDE_ENJECTOR_DEPENDENCIES_H_
+#endif //INCLUDE_NJCTR_NJCTR_H_

@@ -1,5 +1,7 @@
 #include "game.h"
 #include <enjam/application.h>
+#include <enjam/simulation.h>
+#include <enjam/dependencies.h>
 #include <enjam/log.h>
 #include <enjam/scene.h>
 #include <enjam/render_primitive.h>
@@ -7,7 +9,6 @@
 #include <enjam/renderer.h>
 #include <enjam/input.h>
 #include <enjam/math.h>
-#include <njctr/njctr.h>
 #include <fstream>
 #include <sstream>
 

@@ -2,26 +2,8 @@
 #define INCLUDE_ENJAM_APPLICATION_H_
 
 #include <functional>
-#include <utility>
-#include <enjam/di.h>
 
 namespace Enjam {
-
-class Platform;
-class Renderer;
-class Input;
-class Scene;
-class Camera;
-class RenderView;
-class RendererBackend;
-
-class Simulation {
- public:
-  virtual ~Simulation() = default;
-  virtual void start() = 0;
-  virtual void tick() = 0;
-  virtual void stop() = 0;
-};
 
 class Application final {
  public:
@@ -29,8 +11,8 @@ class Application final {
   using CleanupCallback = std::function<void()>;
   using TickCallback = std::function<void()>;
 
-  ~Application();
-  Application();
+  ~Application() = default;
+  Application() = default;
 
   void run(SetupCallback, CleanupCallback, TickCallback);
   void exit() { exitRequested = true; }

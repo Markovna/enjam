@@ -19,11 +19,4 @@ void Application::run(SetupCallback setup, CleanupCallback cleanup, TickCallback
   cleanup();
 }
 
-Application::Application() {
-
-}
-
-Application::~Application() {
-}
-
 }

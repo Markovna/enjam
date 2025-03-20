@@ -29,6 +29,7 @@ static void checkErrors(const char* location) {
 RendererBackendOpengl::RendererBackendOpengl(GLLoaderProc loaderProc, GLSwapChain swapChain)
   : loaderProc(loaderProc)
   , swapChain(std::move(swapChain))
+  , boundDescriptorSets()
   { }
 
 static bool loadGLLoaderIfNeeded(GLLoaderProc glLoaderProc) {
@@ -158,18 +159,34 @@ void RendererBackendOpengl::updateDescriptorSetBuffer(DescriptorSetHandle dsh, u
 
   ENJAM_ASSERT(bd->target == GL_UNIFORM_BUFFER);
 
-  auto& buffer = std::get<GLDescriptorBuffer>(ds->descriptors[binding]);
-  buffer.id = bd->id;
-  buffer.size = size;
-  buffer.offset = offset;
+  auto& descriptor = std::get<GLDescriptorBuffer>(ds->descriptors[binding]);
+  descriptor.id = bd->id;
+  descriptor.size = size;
+  descriptor.offset = offset;
 }
 
-void RendererBackendOpengl::bindDescriptorSet(DescriptorSetHandle dsh) {
-  boundDescriptorSetHandle = dsh;
+void RendererBackendOpengl::updateDescriptorSetTexture(DescriptorSetHandle dsh, uint8_t binding, TextureHandle th) {
+  auto ds = handleAllocator.cast<GLDescriptorSet*>(dsh);
+  auto t = handleAllocator.cast<GLTexture*>(th);
+
+  auto& descriptor = std::get<GLDescriptorTexture>(ds->descriptors[binding]);
+  descriptor.id = t->id;
+  descriptor.target = t->target;
+}
+
+void RendererBackendOpengl::bindDescriptorSet(DescriptorSetHandle dsh, uint8_t set) {
+  boundDescriptorSets[set] = dsh;
 }
 
 void GLDescriptorBuffer::bind(uint8_t binding) const {
   glBindBufferRange(GL_UNIFORM_BUFFER, binding, id, offset, size);
+  GL_CHECK_ERRORS();
+}
+
+void GLDescriptorTexture::bind(uint8_t binding) const {
+  glActiveTexture(GL_TEXTURE0 + binding);
+  glBindTexture(target, id);
+  GL_CHECK_ERRORS();
 }
 
 VertexBufferHandle RendererBackendOpengl::createVertexBuffer(VertexArrayDesc vertexArrayDesc) {
@@ -288,13 +305,62 @@ void RendererBackendOpengl::updateVertexArray(const VertexArrayDesc& vertexArray
 
 }
 
-void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, IndexBufferHandle ibh, uint32_t indexCount, uint32_t indexOffset) {
-  auto program = handleAllocator.cast<GLProgram*>(ph);
-  auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
-  auto ib = handleAllocator.cast<GLIndexBuffer*>(ibh);
+TextureHandle RendererBackendOpengl::createTexture(uint32_t width, uint32_t height, uint8_t levels, TextureFormat format) {
+  auto th = handleAllocator.allocAndConstruct<GLTexture>();
+  auto t = handleAllocator.cast<GLTexture*>(th);
+  t->target = GL_TEXTURE_2D;
 
-  if(boundDescriptorSetHandle) {
-    auto ds = handleAllocator.cast<GLDescriptorSet*>(boundDescriptorSetHandle);
+  t->glFormat = OpenGL::toGLTextureInternalFormat(format);
+
+  GLenum pixelFormat = OpenGL::toGLPixelFormat(t->glFormat);
+  GLenum pixelType = OpenGL::toGLPixelType(t->glFormat);
+
+  glGenTextures(1, &t->id);
+  glBindTexture(t->target, t->id);
+
+  // TODO: use this for GL ES 3.0
+  // glTexStorage2D(t->target, GLsizei(levels), t->glFormat, GLsizei(width), GLsizei(height));
+
+  for (auto i = 0; i < levels; i++) {
+    glTexImage2D(t->target, i, GLint(t->glFormat), GLsizei(width), GLsizei(height), 0, pixelFormat, pixelType, NULL);
+    width = std::max(1u, width / 2);
+    height = std::max(1u, height / 2);
+  }
+  GL_CHECK_ERRORS();
+
+  return th;
+}
+
+void RendererBackendOpengl::setTextureData(
+    TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+    uint32_t width, uint32_t height, uint32_t depth, void* data) {
+  auto t = handleAllocator.cast<GLTexture*>(th);
+
+  GLenum pixelFormat = OpenGL::toGLPixelFormat(t->glFormat);
+  GLenum pixelType = OpenGL::toGLPixelType(t->glFormat);
+
+  glBindTexture(t->target, t->id);
+  glTexSubImage2D(t->target, GLint(level),
+                  GLint(xoffset), GLint(yoffset),
+                  GLsizei(width), GLsizei(height), pixelFormat, pixelType, data);
+}
+
+void RendererBackendOpengl::destroyTexture(TextureHandle th) {
+  auto t = handleAllocator.cast<GLTexture*>(th);
+  glDeleteTextures(1, &t->id);
+  GL_CHECK_ERRORS();
+
+  handleAllocator.dealloc(th, t);
+}
+
+void RendererBackendOpengl::updateDescriptorSets(const DescriptorSetBitset& sets) {
+  for(auto set = 0; set < sets.size(); set++) {
+    if(!sets[set]) { continue; }
+
+    auto dsh = boundDescriptorSets[set];
+    if(!dsh) { continue; }
+
+    auto ds = handleAllocator.cast<GLDescriptorSet*>(dsh);
     auto& descriptors = ds->descriptors;
     for (auto binding = 0; binding < descriptors.size(); ++binding) {
       auto& d = descriptors[binding];
@@ -302,10 +368,18 @@ void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, Index
       std::visit(overloaded {
           [](GLDescriptorNone& arg) { },
           [&binding](GLDescriptorBuffer& arg) { arg.bind(binding); },
-          [](GLDescriptorTexture& arg) { ENJAM_ASSERT("Binding texture is not implemented yet."); }
+          [&binding](GLDescriptorTexture& arg) { arg.bind(binding); }
       }, d);
     }
   }
+}
+
+void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, IndexBufferHandle ibh, uint32_t indexCount, uint32_t indexOffset) {
+  auto program = handleAllocator.cast<GLProgram*>(ph);
+  auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
+  auto ib = handleAllocator.cast<GLIndexBuffer*>(ibh);
+
+  updateDescriptorSets(ULONG_MAX);
 
   glUseProgram(program->id);
 

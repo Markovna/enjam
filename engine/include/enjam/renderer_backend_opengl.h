@@ -3,6 +3,7 @@
 
 #include <enjam/renderer_backend.h>
 #include <enjam/handle_allocator.h>
+#include <bitset>
 #include <functional>
 #include <type_traits>
 #include <glad/glad.h>
@@ -39,6 +40,12 @@ struct GLBufferData : public BufferDataHW {
   GLenum target = 0; // GL_UNIFORM_BUFFER / GL_ARRAY_BUFFER
 };
 
+struct GLTexture : TextureHW {
+  GLuint id;
+  GLenum target;
+  GLenum glFormat;
+};
+
 struct GLDescriptorBuffer {
   GLuint id = 0;
   uint32_t size = 0;
@@ -48,7 +55,10 @@ struct GLDescriptorBuffer {
 };
 
 struct GLDescriptorTexture {
-  // TODO
+  GLuint id;
+  GLenum target;
+
+  void bind(uint8_t binding) const;
 };
 
 struct GLDescriptorNone {};
@@ -84,7 +94,7 @@ struct GLDescriptorSet : public DescriptorSetHW {
 
 class RendererBackendOpengl : public RendererBackend {
  public:
-  using HandleAllocator = HandleAllocator<GLVertexBuffer, GLIndexBuffer, GLProgram, GLBufferData, GLDescriptorSet>;
+  using HandleAllocator = HandleAllocator<GLVertexBuffer, GLIndexBuffer, GLProgram, GLTexture, GLBufferData, GLDescriptorSet>;
 
   explicit RendererBackendOpengl(GLLoaderProc, GLSwapChain);
 
@@ -102,7 +112,8 @@ class RendererBackendOpengl : public RendererBackend {
   DescriptorSetHandle createDescriptorSet(DescriptorSetData&&) override;
   void destroyDescriptorSet(DescriptorSetHandle) override;
   void updateDescriptorSetBuffer(DescriptorSetHandle dsh, uint8_t binding, BufferDataHandle bdh, uint32_t size, uint32_t offset) override;
-  void bindDescriptorSet(DescriptorSetHandle dsh) override;
+  void updateDescriptorSetTexture(DescriptorSetHandle dsh, uint8_t binding, TextureHandle th) override;
+  void bindDescriptorSet(DescriptorSetHandle dsh, uint8_t set) override;
 
   VertexBufferHandle createVertexBuffer(VertexArrayDesc) override;
   void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) override;
@@ -116,15 +127,23 @@ class RendererBackendOpengl : public RendererBackend {
   void updateBufferData(BufferDataHandle, BufferDataDesc&&, uint32_t byteOffset) override;
   void destroyBufferData(BufferDataHandle) override;
 
+  TextureHandle createTexture(uint32_t width, uint32_t height, uint8_t levels, TextureFormat format) override;
+  void setTextureData(TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+                      uint32_t width, uint32_t height, uint32_t depth, void* data) override;
+  void destroyTexture(TextureHandle) override;
+
  private:
+  using DescriptorSetBitset = std::bitset<DESCRIPTOR_SET_COUNT>;
+
   void updateVertexArray(const VertexArrayDesc&);
+  void updateDescriptorSets(const DescriptorSetBitset&);
 
  private:
   GLLoaderProc loaderProc;
   GLSwapChain swapChain;
   HandleAllocator handleAllocator;
   GLuint defaultVertexArray;
-  DescriptorSetHandle boundDescriptorSetHandle;
+  std::array<DescriptorSetHandle, DESCRIPTOR_SET_COUNT> boundDescriptorSets;
 };
 
 }

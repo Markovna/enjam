@@ -68,6 +68,21 @@ constexpr inline uint32_t indexOffsetToByteOffset(uint32_t indexOffset) {
   return indexOffset << indicesShift;
 }
 
+constexpr inline GLenum toGLTextureInternalFormat(TextureFormat format) noexcept {
+  // TODO
+  return GL_RGB8;
+}
+
+constexpr inline GLenum toGLPixelFormat(GLenum internalFormat) noexcept {
+  // TODO
+  return GL_RGB;
+}
+
+constexpr inline GLenum toGLPixelType(GLenum internalFormat) noexcept {
+  // TODO
+  return GL_UNSIGNED_BYTE;
+}
+
 constexpr inline GLenum toGLVertexAttribType(VertexAttributeType type) {
   using Type = VertexAttributeType;
   switch (type) {

@@ -53,6 +53,10 @@ enum class DescriptorType : uint8_t {
   TEXTURE
 };
 
+enum class TextureFormat : uint16_t {
+
+};
+
 struct DescriptorSetBinding {
   uint8_t binding;
   DescriptorType type;
@@ -68,12 +72,14 @@ struct IndexBufferHW {};
 struct ProgramHW {};
 struct DescriptorSetHW {};
 struct BufferDataHW {};
+struct TextureHW {};
 
 using VertexBufferHandle = Handle<VertexBufferHW>;
 using IndexBufferHandle = Handle<IndexBufferHW>;
 using ProgramHandle = Handle<ProgramHW>;
 using DescriptorSetHandle = Handle<DescriptorSetHW>;
 using BufferDataHandle = Handle<BufferDataHW>;
+using TextureHandle = Handle<TextureHW>;
 
 struct VertexAttribute {
   static constexpr uint32_t FLAG_ENABLED = 0x01;
@@ -129,6 +135,8 @@ struct BufferDataDesc {
 
 class ENJAM_API RendererBackend {
  public:
+  static constexpr size_t DESCRIPTOR_SET_COUNT = 4;
+
   virtual ~RendererBackend() = default;
   virtual bool init() = 0;
   virtual void shutdown() = 0;
@@ -143,7 +151,8 @@ class ENJAM_API RendererBackend {
   virtual DescriptorSetHandle createDescriptorSet(DescriptorSetData&&) = 0;
   virtual void destroyDescriptorSet(DescriptorSetHandle) = 0;
   virtual void updateDescriptorSetBuffer(DescriptorSetHandle dsh, uint8_t binding, BufferDataHandle bdh, uint32_t size, uint32_t offset) = 0;
-  virtual void bindDescriptorSet(DescriptorSetHandle dsh) = 0;
+  virtual void updateDescriptorSetTexture(DescriptorSetHandle dsh, uint8_t binding, TextureHandle th) = 0;
+  virtual void bindDescriptorSet(DescriptorSetHandle dsh, uint8_t set) = 0;
 
   virtual VertexBufferHandle createVertexBuffer(VertexArrayDesc) = 0;
   virtual void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) = 0;
@@ -156,6 +165,11 @@ class ENJAM_API RendererBackend {
   virtual BufferDataHandle createBufferData(uint32_t size, BufferTargetBinding) = 0;
   virtual void updateBufferData(BufferDataHandle, BufferDataDesc&&, uint32_t byteOffset) = 0;
   virtual void destroyBufferData(BufferDataHandle) = 0;
+
+  virtual TextureHandle createTexture(uint32_t width, uint32_t height, uint8_t levels, TextureFormat format) = 0;
+  virtual void setTextureData(TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+                              uint32_t width, uint32_t height, uint32_t depth, void* data) = 0;
+  virtual void destroyTexture(TextureHandle) = 0;
 };
 
 }

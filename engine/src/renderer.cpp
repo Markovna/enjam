@@ -42,7 +42,7 @@ void Renderer::draw(RenderView& renderView) {
 
   rendererBackend.beginFrame();
 
-  rendererBackend.bindDescriptorSet(viewDescriptorSetHandle);
+  rendererBackend.bindDescriptorSet(viewDescriptorSetHandle, 0);
 
   renderView.updateViewUniformBuffer(rendererBackend, viewUniformBufferHandle);
 

@@ -5,6 +5,7 @@ project(enjam)
 add_subdirectory(external/fmt EXCLUDE_FROM_ALL)
 add_subdirectory(external/glad EXCLUDE_FROM_ALL)
 add_subdirectory(external/glfw EXCLUDE_FROM_ALL)
+add_subdirectory(external/stb_image EXCLUDE_FROM_ALL)
 add_subdirectory(libs/njctr EXCLUDE_FROM_ALL)
 
 add_subdirectory(engine)

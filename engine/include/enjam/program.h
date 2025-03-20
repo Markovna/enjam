@@ -15,19 +15,28 @@ enum class ShaderStage {
 
 class ProgramData {
  public:
+  enum class DescriptorType : uint16_t {
+    UNIFORM = 0,
+    TEXTURE,
+
+    COUNT
+  };
+
   struct Descriptor {
     std::string name;
   };
 
   static constexpr size_t MAX_DESCRIPTORS_COUNT = 16;
   using ProgramSource = std::array<std::string, (size_t) ShaderStage::COUNT>;
-  using DescriptorsMap = std::array<Descriptor, MAX_DESCRIPTORS_COUNT>;
+  using DescriptorsArray = std::array<Descriptor, MAX_DESCRIPTORS_COUNT>;
+  using DescriptorsMap = std::array<DescriptorsArray, (size_t) DescriptorType::COUNT>;
+
 
   ProgramData& setShader(ShaderStage, const char *source);
   ProgramSource& getSource() { return source; }
 
-  ProgramData& setDescriptorBinding(const char* name, uint8_t binding) {
-    descriptors[binding] = Descriptor { .name = name };
+  ProgramData& setDescriptorBinding(const char* name, DescriptorType type, uint8_t binding) {
+    descriptors[(size_t)type][binding] = Descriptor { .name = name };
     return *this;
   }
 
@@ -35,7 +44,7 @@ class ProgramData {
 
  private:
   ProgramSource source;
-  DescriptorsMap descriptors;
+  DescriptorsMap descriptors { };
 };
 
 }

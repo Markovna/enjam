@@ -70,12 +70,12 @@ constexpr inline uint32_t indexOffsetToByteOffset(uint32_t indexOffset) {
 
 constexpr inline GLenum toGLTextureInternalFormat(TextureFormat format) noexcept {
   // TODO
-  return GL_RGB8;
+  return GL_RGBA8;
 }
 
 constexpr inline GLenum toGLPixelFormat(GLenum internalFormat) noexcept {
   // TODO
-  return GL_RGB;
+  return GL_RGBA;
 }
 
 constexpr inline GLenum toGLPixelType(GLenum internalFormat) noexcept {

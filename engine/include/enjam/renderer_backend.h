@@ -54,7 +54,7 @@ enum class DescriptorType : uint8_t {
 };
 
 enum class TextureFormat : uint16_t {
-
+  RGB8
 };
 
 struct DescriptorSetBinding {

@@ -137,6 +137,8 @@ class RendererBackendOpengl : public RendererBackend {
 
   void updateVertexArray(const VertexArrayDesc&);
   void updateDescriptorSets(const DescriptorSetBitset&);
+  void updateProgramUniformBindings(uint32_t id, const ProgramData::DescriptorsArray& descriptors);
+  void updateProgramTextureBindings(uint32_t id, const ProgramData::DescriptorsArray& descriptors);
 
  private:
   GLLoaderProc loaderProc;

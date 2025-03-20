@@ -6,6 +6,7 @@
 #include <enjam/platform.h>
 #include <enjam/renderer.h>
 #include <enjam/render_view.h>
+#include <enjam/simulation.h>
 #include <enjam/scene.h>
 #include <enjam/utils.h>
 #include <enjam/dependencies.h>

@@ -67,6 +67,9 @@ class RenderPrimitive {
   ProgramHandle getProgramHandle() { return programHandle; }
   void setProgramHandle(ProgramHandle handle) { programHandle = handle; }
 
+  DescriptorSetHandle getDescriptorSetHandle() { return descriptorSetHandle; }
+  void setDescriptorSetHandle(DescriptorSetHandle handle) { descriptorSetHandle = handle; }
+
   const math::mat4f& getTransform() const { return transform; }
   void setTransform(math::mat4f&& tr) { transform = tr; }
 
@@ -74,6 +77,7 @@ class RenderPrimitive {
   VertexBuffer* vertexBuffer;
   IndexBuffer* indexBuffer;
   ProgramHandle programHandle;
+  DescriptorSetHandle descriptorSetHandle;
   math::mat4f transform;
 };
 

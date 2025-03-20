@@ -9,6 +9,7 @@
 #include <enjam/renderer.h>
 #include <enjam/input.h>
 #include <enjam/math.h>
+#include <stb_image/stb_image.h>
 #include <fstream>
 #include <sstream>
 
@@ -28,14 +29,14 @@ class SandboxSimulation : public Enjam::Simulation {
 
   void start() override {
     static const float vertexData[] {
-        -1, -1,  1,
-         1, -1,  1,
-        -1,  1,  1,
-         1,  1,  1,
-        -1, -1, -1,
-         1, -1, -1,
-        -1,  1, -1,
-         1,  1, -1
+        -1, -1,  1,  0,  0,
+         1, -1,  1,  1,  0,
+        -1,  1,  1,  0,  1,
+         1,  1,  1,  1,  1,
+        -1, -1, -1,  0,  0,
+         1, -1, -1,  1,  0,
+        -1,  1, -1,  0,  1,
+         1,  1, -1,  1,  1
     };
 
     static const uint32_t indexData[] {
@@ -61,9 +62,14 @@ class SandboxSimulation : public Enjam::Simulation {
                     .type = Enjam::VertexAttributeType::FLOAT3,
                     .flags = Enjam::VertexAttribute::FLAG_ENABLED,
                     .offset = 0
+                },
+                Enjam::VertexAttribute{
+                    .type = Enjam::VertexAttributeType::FLOAT2,
+                    .flags = Enjam::VertexAttribute::FLAG_ENABLED,
+                    .offset = 3 * sizeof(float)
                 }
             },
-            .stride = 3 * sizeof(float)
+            .stride = 5 * sizeof(float)
         });
 
     vertexBuffer->setBuffer(rendererBackend, Enjam::BufferDataDesc{(void *) vertexData, sizeof(vertexData)}, 0);
@@ -82,8 +88,9 @@ class SandboxSimulation : public Enjam::Simulation {
     auto programData = Enjam::ProgramData()
         .setShader(Enjam::ShaderStage::VERTEX, vertexShaderStrBuffer.str().c_str())
         .setShader(Enjam::ShaderStage::FRAGMENT, fragmentShaderStrBuffer.str().c_str())
-        .setDescriptorBinding("perView", 0)
-        .setDescriptorBinding("perObject", 1);
+        .setDescriptorBinding("texture1", Enjam::ProgramData::DescriptorType::TEXTURE, 0)
+        .setDescriptorBinding("perView", Enjam::ProgramData::DescriptorType::UNIFORM, 0)
+        .setDescriptorBinding("perObject", Enjam::ProgramData::DescriptorType::UNIFORM, 1);
 
     camera.projectionMatrix = Enjam::math::mat4f::perspective(60, 1.4, 0.1, 10);
     camera.position = Enjam:: math::vec3f { 0, 0, -8 };
@@ -94,12 +101,30 @@ class SandboxSimulation : public Enjam::Simulation {
 
     programHandle = rendererBackend.createProgram(programData);
 
-    scene.getPrimitives().emplace_back( vertexBuffer, indexBuffer, programHandle );
+    auto descriptorSetHandle = rendererBackend.createDescriptorSet(Enjam::DescriptorSetData {
+        .bindings {
+            { .binding = 0, .type = Enjam::DescriptorType::TEXTURE },
+        }
+    });
 
-    auto triangle = Enjam::RenderPrimitive { vertexBuffer, indexBuffer, programHandle };
-    triangle.setTransform(Enjam::math::mat4f::translation(Enjam::math::vec3f {4, 0, 0}));
+    {
+      int width, height, nrChannels;
+      unsigned char *data = stbi_load("textures/dummy.png", &width, &height, &nrChannels, 0);
+      ENJAM_ASSERT(data != nullptr);
+      auto th = rendererBackend.createTexture(width, height, 1, Enjam::TextureFormat::RGB8);
+      rendererBackend.setTextureData(th, 0, 0, 0, 0, width, height, 0, data);
+      stbi_image_free(data);
+      rendererBackend.updateDescriptorSetTexture(descriptorSetHandle, 0, th);
+    }
 
-    scene.getPrimitives().push_back(triangle);
+    auto triangle1 = Enjam::RenderPrimitive { vertexBuffer, indexBuffer, programHandle };
+    triangle1.setDescriptorSetHandle(descriptorSetHandle);
+    scene.getPrimitives().push_back(triangle1);
+
+    auto triangle2 = Enjam::RenderPrimitive { vertexBuffer, indexBuffer, programHandle };
+    triangle2.setDescriptorSetHandle(descriptorSetHandle);
+    triangle2.setTransform(Enjam::math::mat4f::translation(Enjam::math::vec3f {4, 0, 0}));
+    scene.getPrimitives().push_back(triangle2);
 
     ENJAM_INFO("Simulation started!");
   }

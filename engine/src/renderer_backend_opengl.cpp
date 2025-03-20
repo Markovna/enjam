@@ -93,6 +93,30 @@ uint32_t compileShader(GLenum stage, const char* str) {
   return id;
 }
 
+void RendererBackendOpengl::updateProgramUniformBindings(uint32_t id, const ProgramData::DescriptorsArray& descriptors) {
+  for(auto binding = 0; binding < descriptors.size(); ++binding) {
+    auto& desc = descriptors[binding];
+    if(desc.name.empty()) { continue; }
+
+    uint32_t index = glGetUniformBlockIndex(id, desc.name.c_str());
+    glUniformBlockBinding(id, index, binding);
+  }
+  GL_CHECK_ERRORS();
+};
+
+void RendererBackendOpengl::updateProgramTextureBindings(uint32_t id, const ProgramData::DescriptorsArray& descriptors) {
+  glUseProgram(id);
+  for(auto binding = 0; binding < descriptors.size(); ++binding) {
+    auto& desc = descriptors[binding];
+    if(desc.name.empty()) { continue; }
+
+    auto location = glGetUniformLocation(id, desc.name.c_str());
+    ENJAM_ASSERT(location >= 0);
+    glUniform1i(location, binding);
+  }
+  GL_CHECK_ERRORS();
+};
+
 ProgramHandle RendererBackendOpengl::createProgram(ProgramData& data) {
   auto ph = handleAllocator.allocAndConstruct<GLProgram>();
   auto p = handleAllocator.cast<GLProgram*>(ph);
@@ -121,14 +145,8 @@ ProgramHandle RendererBackendOpengl::createProgram(ProgramData& data) {
   GL_CHECK_ERRORS();
 
   ProgramData::DescriptorsMap& descriptors = data.getDescriptors();
-  for(auto binding = 0; binding < descriptors.size(); ++binding) {
-    auto& desc = descriptors[binding];
-    if(desc.name.empty()) { continue; }
-
-    uint32_t index = glGetUniformBlockIndex(id, desc.name.c_str());
-    glUniformBlockBinding(id, index, binding);
-  }
-  GL_CHECK_ERRORS();
+  updateProgramUniformBindings(id, descriptors[size_t(ProgramData::DescriptorType::UNIFORM)]);
+  updateProgramTextureBindings(id, descriptors[size_t(ProgramData::DescriptorType::TEXTURE)]);
 
   p->id = id;
   return ph;
@@ -184,6 +202,7 @@ void GLDescriptorBuffer::bind(uint8_t binding) const {
 }
 
 void GLDescriptorTexture::bind(uint8_t binding) const {
+  ENJAM_ASSERT(id != 0);
   glActiveTexture(GL_TEXTURE0 + binding);
   glBindTexture(target, id);
   GL_CHECK_ERRORS();
@@ -317,6 +336,14 @@ TextureHandle RendererBackendOpengl::createTexture(uint32_t width, uint32_t heig
 
   glGenTextures(1, &t->id);
   glBindTexture(t->target, t->id);
+
+  // set the texture wrapping parameters
+  glTexParameteri(t->target, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+  glTexParameteri(t->target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+  // set texture filtering parameters
+  glTexParameteri(t->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(t->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   // TODO: use this for GL ES 3.0
   // glTexStorage2D(t->target, GLsizei(levels), t->glFormat, GLsizei(width), GLsizei(height));

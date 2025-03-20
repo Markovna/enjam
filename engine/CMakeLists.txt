@@ -36,7 +36,7 @@ set(ENJAM_HEADERS
         include/enjam/utils.h
         include/enjam/dependencies.h
         include/enjam/application.h
-        include/enjam/simulation.h)
+        include/enjam/simulation.h include/enjam/material.h)
 
 add_library(enjam STATIC ${ENJAM_SOURCES} ${ENJAM_HEADERS})
 
@@ -44,5 +44,6 @@ target_include_directories(enjam PUBLIC include)
 
 target_link_libraries(enjam PUBLIC fmt)
 target_link_libraries(enjam PRIVATE glfw)
+target_link_libraries(enjam PUBLIC stb_image)
 target_link_libraries(enjam PRIVATE glad)
 target_link_libraries(enjam PUBLIC njctr)

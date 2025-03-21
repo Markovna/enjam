@@ -88,9 +88,9 @@ class SandboxSimulation : public Enjam::Simulation {
     auto programData = Enjam::ProgramData()
         .setShader(Enjam::ShaderStage::VERTEX, vertexShaderStrBuffer.str().c_str())
         .setShader(Enjam::ShaderStage::FRAGMENT, fragmentShaderStrBuffer.str().c_str())
-        .setDescriptorBinding("texture1", Enjam::ProgramData::DescriptorType::TEXTURE, 0)
-        .setDescriptorBinding("perView", Enjam::ProgramData::DescriptorType::UNIFORM, 0)
-        .setDescriptorBinding("perObject", Enjam::ProgramData::DescriptorType::UNIFORM, 1);
+        .setDescriptorSet(1, { { "texture1",  Enjam::ProgramData::DescriptorType::SAMPLER } })
+        .setDescriptorSet(0, { { "perView",  Enjam::ProgramData::DescriptorType::UNIFORM },
+                               { "perObject", Enjam::ProgramData::DescriptorType::UNIFORM }});
 
     camera.projectionMatrix = Enjam::math::mat4f::perspective(60, 1.4, 0.1, 10);
     camera.position = Enjam:: math::vec3f { 0, 0, -8 };

@@ -22,6 +22,13 @@ struct GLSwapChain {
 
 struct GLProgram : public ProgramHW {
   GLuint id = 0;
+
+  struct DescriptorInfo {
+    uint32_t binding;
+  };
+
+  using DescriptorSet = std::array<DescriptorInfo, (size_t) ProgramData::MAX_DESCRIPTOR_BINDINGS_COUNT>;
+  std::array<DescriptorSet, (size_t) ProgramData::DESCRIPTOR_SET_COUNT> descriptorSets;
 };
 
 struct GLVertexBuffer : public VertexBufferHW {
@@ -133,19 +140,17 @@ class RendererBackendOpengl : public RendererBackend {
   void destroyTexture(TextureHandle) override;
 
  private:
-  using DescriptorSetBitset = std::bitset<DESCRIPTOR_SET_COUNT>;
+  using DescriptorSetBitset = std::bitset<ProgramData::DESCRIPTOR_SET_COUNT>;
 
   void updateVertexArray(const VertexArrayDesc&);
-  void updateDescriptorSets(const DescriptorSetBitset&);
-  void updateProgramUniformBindings(uint32_t id, const ProgramData::DescriptorsArray& descriptors);
-  void updateProgramTextureBindings(uint32_t id, const ProgramData::DescriptorsArray& descriptors);
+  void updateDescriptorSets(GLProgram*, const DescriptorSetBitset&);
 
  private:
   GLLoaderProc loaderProc;
   GLSwapChain swapChain;
   HandleAllocator handleAllocator;
   GLuint defaultVertexArray;
-  std::array<DescriptorSetHandle, DESCRIPTOR_SET_COUNT> boundDescriptorSets;
+  std::array<DescriptorSetHandle, ProgramData::DESCRIPTOR_SET_COUNT> boundDescriptorSets;
 };
 
 }

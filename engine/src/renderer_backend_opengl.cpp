@@ -93,30 +93,6 @@ uint32_t compileShader(GLenum stage, const char* str) {
   return id;
 }
 
-void RendererBackendOpengl::updateProgramUniformBindings(uint32_t id, const ProgramData::DescriptorsArray& descriptors) {
-  for(auto binding = 0; binding < descriptors.size(); ++binding) {
-    auto& desc = descriptors[binding];
-    if(desc.name.empty()) { continue; }
-
-    uint32_t index = glGetUniformBlockIndex(id, desc.name.c_str());
-    glUniformBlockBinding(id, index, binding);
-  }
-  GL_CHECK_ERRORS();
-};
-
-void RendererBackendOpengl::updateProgramTextureBindings(uint32_t id, const ProgramData::DescriptorsArray& descriptors) {
-  glUseProgram(id);
-  for(auto binding = 0; binding < descriptors.size(); ++binding) {
-    auto& desc = descriptors[binding];
-    if(desc.name.empty()) { continue; }
-
-    auto location = glGetUniformLocation(id, desc.name.c_str());
-    ENJAM_ASSERT(location >= 0);
-    glUniform1i(location, binding);
-  }
-  GL_CHECK_ERRORS();
-};
-
 ProgramHandle RendererBackendOpengl::createProgram(ProgramData& data) {
   auto ph = handleAllocator.allocAndConstruct<GLProgram>();
   auto p = handleAllocator.cast<GLProgram*>(ph);
@@ -144,9 +120,36 @@ ProgramHandle RendererBackendOpengl::createProgram(ProgramData& data) {
 
   GL_CHECK_ERRORS();
 
-  ProgramData::DescriptorsMap& descriptors = data.getDescriptors();
-  updateProgramUniformBindings(id, descriptors[size_t(ProgramData::DescriptorType::UNIFORM)]);
-  updateProgramTextureBindings(id, descriptors[size_t(ProgramData::DescriptorType::TEXTURE)]);
+  auto& descriptorsMap = data.getDescriptorsMap();
+  glUseProgram(id);
+
+  auto uniqueBinding = 0;
+  for(auto set = 0; set < descriptorsMap.size(); set++) {
+    auto& descriptorSet = descriptorsMap[set];
+    for(auto binding = 0; binding < descriptorSet.size(); ++binding) {
+      auto &desc = descriptorSet[binding];
+      if(desc.name.empty()) { continue; }
+
+      switch (desc.type) {
+        case ProgramData::DescriptorType::SAMPLER: {
+          auto location = glGetUniformLocation(id, desc.name.c_str());
+          ENJAM_ASSERT(location >= 0);
+          glUniform1i(location, uniqueBinding);
+          break;
+        }
+        case ProgramData::DescriptorType::UNIFORM: {
+          uint32_t index = glGetUniformBlockIndex(id, desc.name.c_str());
+          glUniformBlockBinding(id, index, uniqueBinding);
+          break;
+        }
+      }
+
+      p->descriptorSets[set][binding].binding = uniqueBinding;
+      uniqueBinding++;
+    }
+  }
+
+  GL_CHECK_ERRORS();
 
   p->id = id;
   return ph;
@@ -380,7 +383,7 @@ void RendererBackendOpengl::destroyTexture(TextureHandle th) {
   handleAllocator.dealloc(th, t);
 }
 
-void RendererBackendOpengl::updateDescriptorSets(const DescriptorSetBitset& sets) {
+void RendererBackendOpengl::updateDescriptorSets(GLProgram* program, const DescriptorSetBitset& sets) {
   for(auto set = 0; set < sets.size(); set++) {
     if(!sets[set]) { continue; }
 
@@ -392,10 +395,13 @@ void RendererBackendOpengl::updateDescriptorSets(const DescriptorSetBitset& sets
     for (auto binding = 0; binding < descriptors.size(); ++binding) {
       auto& d = descriptors[binding];
 
+      auto& descriptorInfo = program->descriptorSets[set][binding];
+      auto programBinding = descriptorInfo.binding;
+
       std::visit(overloaded {
           [](GLDescriptorNone& arg) { },
-          [&binding](GLDescriptorBuffer& arg) { arg.bind(binding); },
-          [&binding](GLDescriptorTexture& arg) { arg.bind(binding); }
+          [&programBinding](GLDescriptorBuffer& arg) { arg.bind(programBinding); },
+          [&programBinding](GLDescriptorTexture& arg) { arg.bind(programBinding); }
       }, d);
     }
   }
@@ -406,7 +412,7 @@ void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, Index
   auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
   auto ib = handleAllocator.cast<GLIndexBuffer*>(ibh);
 
-  updateDescriptorSets(ULONG_MAX);
+  updateDescriptorSets(program, ULONG_MAX);
 
   glUseProgram(program->id);
 

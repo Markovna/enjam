@@ -135,7 +135,6 @@ struct BufferDataDesc {
 
 class ENJAM_API RendererBackend {
  public:
-  static constexpr size_t DESCRIPTOR_SET_COUNT = 4;
 
   virtual ~RendererBackend() = default;
   virtual bool init() = 0;

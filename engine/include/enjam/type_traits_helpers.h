@@ -10,6 +10,9 @@ struct overloaded : Ts ... { using Ts::operator()...; };
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
+template<class T, class... Ts>
+using is_same_with_any = std::disjunction<std::is_same<T, Ts>...>;
+
 template<typename A, typename B = int, typename C = int, typename D = int>
 using enable_if_arithmetic_t = std::enable_if_t<
       std::is_arithmetic<A>::value &&

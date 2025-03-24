@@ -11,7 +11,9 @@ set(ENJAM_SOURCES
         src/render_view.cpp
         src/scene.cpp
         src/platform.cpp
-        src/utils.cpp src/application.cpp)
+        src/utils.cpp
+        src/application.cpp
+        src/assetfile_parser.cpp)
 
 set(ENJAM_HEADERS
         include/enjam/assert.h
@@ -36,7 +38,10 @@ set(ENJAM_HEADERS
         include/enjam/utils.h
         include/enjam/dependencies.h
         include/enjam/application.h
-        include/enjam/simulation.h include/enjam/material.h)
+        include/enjam/simulation.h
+        include/enjam/material.h
+        include/enjam/assets_manager.h
+        include/enjam/assetfile_parser.h)
 
 add_library(enjam STATIC ${ENJAM_SOURCES} ${ENJAM_HEADERS})
 
@@ -47,3 +52,5 @@ target_link_libraries(enjam PRIVATE glfw)
 target_link_libraries(enjam PUBLIC stb_image)
 target_link_libraries(enjam PRIVATE glad)
 target_link_libraries(enjam PUBLIC njctr)
+
+add_subdirectory(test EXCLUDE_FROM_ALL)

@@ -21,7 +21,7 @@ struct BufferHash {
 
 using value_t = std::variant<int64_t, float_t, std::string, Asset, BufferHash>;
 
-class Asset {
+class Asset final {
  public:
   template<class T, std::enable_if_t<is_same_with_any<T, int64_t, float_t, std::string>::value, bool> = true>
   T get(uint64_t hash) const;
@@ -31,6 +31,8 @@ class Asset {
 
   template<class T>
   bool isType(uint64_t hash) const;
+
+  bool empty() const { return properties.empty(); }
 
   void add(Property&& prop) {
     properties.push_back(std::move(prop));
@@ -42,7 +44,7 @@ class Asset {
   std::vector<Property> properties;
 };
 
-struct Property {
+struct Property final {
   uint64_t nameHash;
   value_t value;
 };

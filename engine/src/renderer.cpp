@@ -50,8 +50,7 @@ void Renderer::draw(RenderView& renderView) {
   for(auto i = 0; i < primitives.size(); ++i) {
     auto& primitive = primitives[i];
 
-    auto dsh = primitive.getDescriptorSetHandle();
-    rendererBackend.bindDescriptorSet(dsh, 1);
+    rendererBackend.bindDescriptorSet(primitive.getDescriptorSetHandle(), 1);
     renderView.updateObjectUniformBuffer(rendererBackend, objectsUniformBufferHandle, i);
     rendererBackend.draw(primitive.getProgramHandle(), primitive.getVertexBuffer()->getHandle(), primitive.getIndexBuffer()->getHandle());
   }

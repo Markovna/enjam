@@ -67,6 +67,7 @@ class AssetFileParser {
 
  public:
   static bool parse(std::istream& input, Asset& asset);
+  static Asset parse(std::istream& input);
 
  private:
   static token_type parseObject(Lexer& lexer, Asset& object);

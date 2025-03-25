@@ -1,5 +1,5 @@
 #include <enjam/assetfile_parser.h>
-#include <enjam/assets_manager.h>
+#include <enjam/asset.h>
 
 namespace Enjam {
 
@@ -134,6 +134,15 @@ void Lexer::clear() {
 bool AssetFileParser::parse(std::istream &input, Asset &asset) {
   Lexer lexer { input };
   return parseObject(lexer, asset) == token_type::end_of_input;
+}
+
+Asset AssetFileParser::parse(std::istream& input) {
+  Lexer lexer { input };
+  Asset asset;
+  if(parseObject(lexer, asset) != token_type::end_of_input) {
+    asset.clear();
+  }
+  return asset;
 }
 
 AssetFileParser::token_type AssetFileParser::parseObject(Lexer &lexer, Asset &object) {

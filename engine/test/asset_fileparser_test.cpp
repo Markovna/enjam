@@ -1,6 +1,8 @@
-#include "enjam/assets_manager.h"
+#include "enjam/asset.h"
 #include "enjam/assetfile_parser.h"
+#include "enjam/asset_manager.h"
 #include "enjam/log.h"
+#include "enjam/program.h"
 
 int main() {
   using namespace Enjam;

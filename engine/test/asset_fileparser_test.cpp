@@ -25,7 +25,7 @@ int main() {
   assert(asset["int"].as<int>() == -42);
   assert(asset["uint"].as<unsigned int>() == 42);
 
-  assert(asset.at("nested")->is<Enjam::object_t>());
+  assert(asset.at("nested")->is<Asset::object_t>());
   assert(!asset.at("nested")->at("first")->as<std::string>().empty());
 
 }

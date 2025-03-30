@@ -19,11 +19,14 @@ struct BufferHash {
   std::string value;
 };
 
-using object_t = std::vector<Property>;
-using array_t = std::vector<Asset>;
-using value_t = std::variant<int64_t, float_t, std::string, object_t, array_t, BufferHash>;
 
 class Asset final {
+ public:
+  using object_t = std::vector<Property>;
+  using array_t = std::vector<Asset>;
+  using value_t = std::variant<int64_t, float_t, std::string, object_t, array_t, BufferHash>;
+
+
  public:
   template<class T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
   T as() const;

@@ -19,64 +19,87 @@ struct BufferHash {
   std::string value;
 };
 
-using value_t = std::variant<int64_t, float_t, std::string, Asset, BufferHash>;
+using object_t = std::vector<Property>;
+using array_t = std::vector<Asset>;
+using value_t = std::variant<int64_t, float_t, std::string, object_t, array_t, BufferHash>;
 
 class Asset final {
  public:
-  template<class T, std::enable_if_t<is_same_with_any<T, int64_t, float_t, std::string>::value, bool> = true>
-  T get(uint64_t hash) const;
+  template<class T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
+  T as() const;
 
-  template<class T, std::enable_if_t<std::is_same_v<T, Asset>, bool> = true>
-  const Asset* get(uint64_t hash) const;
+  template<class T, std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
+  T as() const;
+
+  template<class T, std::enable_if_t<std::is_same<T, std::string>::value, bool> = true>
+  const T& as() const;
 
   template<class T>
-  bool isType(uint64_t hash) const;
+  bool is() const { return std::holds_alternative<T>(value); }
 
-  bool empty() const { return properties.empty(); }
+  Asset() = default;
+  Asset(const Asset&) = default;
+  Asset(Asset&&) = default;
 
-  void add(Property&& prop) {
-    properties.push_back(std::move(prop));
-  }
+  template<class T, std::enable_if_t<std::is_integral<std::remove_reference_t<T>>::value, bool> = true>
+  Asset& operator=(T);
 
-  void clear() { properties.clear(); }
+  template<class T, std::enable_if_t<std::is_floating_point<std::remove_reference_t<T>>::value, bool> = true>
+  Asset& operator=(T);
+
+  template<class T, std::enable_if_t<std::is_same<std::remove_reference_t<T>, std::string>::value, bool> = true>
+  Asset& operator=(T&&);
+
+  Asset& operator=(const Asset&) = default;
+  Asset& operator=(Asset&&) noexcept = default;
+
+  Asset& operator[](const std::string&);
+  Asset& operator[](size_t);
+
+  const Asset* at(const std::string&) const;
+
+  void clear() { value = {}; }
 
  private:
-  std::vector<Property> properties;
+  value_t value;
 };
 
 struct Property final {
   uint64_t nameHash;
-  value_t value;
+  Asset value;
 };
 
-template<class T>
-bool Asset::isType(uint64_t hash) const {
-  for (auto& property : properties) {
-    if(property.nameHash == hash) {
-      return std::holds_alternative<T>(property.value);
-    }
-  }
-  return false;
+template<class T, std::enable_if_t<std::is_integral<T>::value, bool>>
+T Asset::as() const {
+  return (T) std::get<int64_t>(value);
 }
 
-template<class T, std::enable_if_t<is_same_with_any<T, int64_t, float_t, std::string>::value, bool>>
-T Asset::get(uint64_t hash) const {
-  for (auto& property : properties) {
-    if(property.nameHash == hash) {
-      return std::get<T>(property.value);
-    }
-  }
-  return T{};
+template<class T, std::enable_if_t<std::is_floating_point<T>::value, bool>>
+T Asset::as() const {
+  return (T) std::get<float_t>(value);
 }
 
-template<class T, std::enable_if_t<std::is_same_v<T, Asset>, bool>>
-const Asset* Asset::get(uint64_t hash) const {
-  for (auto& property : properties) {
-    if(property.nameHash == hash) {
-      return &std::get<Asset>(property.value);
-    }
-  }
-  return nullptr;
+template<class T, std::enable_if_t<std::is_same<T, std::string>::value, bool>>
+const T& Asset::as() const {
+  return std::get<std::string>(value);
+}
+
+template<class T, std::enable_if_t<std::is_integral<std::remove_reference_t<T>>::value, bool>>
+Asset& Asset::operator=(T arg) {
+  value = (int64_t) arg;
+  return *this;
+}
+
+template<class T, std::enable_if_t<std::is_floating_point<std::remove_reference_t<T>>::value, bool>>
+Asset& Asset::operator=(T arg) {
+  value = (float_t) arg;
+  return *this;
+}
+
+template<class T, std::enable_if_t<std::is_same<std::remove_reference_t<T>, std::string>::value, bool>>
+Asset& Asset::operator=(T&& arg) {
+  value = std::forward<T>(arg);
+  return *this;
 }
 
 }

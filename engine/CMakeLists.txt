@@ -13,7 +13,7 @@ set(ENJAM_SOURCES
         src/platform.cpp
         src/utils.cpp
         src/application.cpp
-        src/assetfile_parser.cpp src/asset_manager.cpp)
+        src/assetfile_parser.cpp src/asset_manager.cpp src/asset.cpp)
 
 set(ENJAM_HEADERS
         include/enjam/assert.h

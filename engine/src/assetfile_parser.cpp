@@ -145,7 +145,7 @@ Asset AssetFileParser::parse(std::istream& input) {
   return asset;
 }
 
-AssetFileParser::token_type AssetFileParser::parseObject(Lexer &lexer, Asset &object) {
+AssetFileParser::token_type AssetFileParser::parseObject(Lexer &lexer, Asset& object) {
   std::hash<std::string> hash;
   while(true) {
     if(lexer.scanKey() != token_type::string_value) { return token_type::parse_error; }
@@ -153,12 +153,8 @@ AssetFileParser::token_type AssetFileParser::parseObject(Lexer &lexer, Asset &ob
 
     if(lexer.scan() != token_type::name_separator) { return token_type::parse_error; }
 
-    Property property;
-    if(!parseProperty(lexer, property)) { return token_type::parse_error; }
-
-    property.nameHash = hash(key);
-
-    object.add(std::move(property));
+    Asset property;
+    if(!parseProperty(lexer, object[key])) { return token_type::parse_error; }
 
     auto type = lexer.scan();
     if(type == token_type::value_separator) {
@@ -169,31 +165,31 @@ AssetFileParser::token_type AssetFileParser::parseObject(Lexer &lexer, Asset &ob
   }
 }
 
-bool AssetFileParser::parseProperty(Lexer &lexer, Property& property) {
+bool AssetFileParser::parseProperty(Lexer &lexer, Asset& value) {
   while(true) {
     auto type = lexer.scan();
     switch(type) {
       case token_type::begin_object: {
         if(Asset object; parseObject(lexer, object) == token_type::end_object) {
-          property.value = std::move(object);
+          value = std::move(object);
           return true;
         }
         return false;
       }
       case token_type::float_value: {
-        property.value = lexer.getFloat();
+        value = lexer.getFloat();
         return true;
       }
       case token_type::int_value: {
-        property.value = lexer.getInt();
+        value = lexer.getInt();
         return true;
       }
       case token_type::string_value: {
-        property.value = lexer.getStr();
+        value = lexer.getStr();
         return true;
       }
       case token_type::hashcode_value: {
-        property.value = BufferHash { .value = lexer.getStr() };
+        //value = BufferHash { .value = lexer.getStr() };
         return true;
       }
       case token_type::uninitialized:

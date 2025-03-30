@@ -70,8 +70,8 @@ class AssetFileParser {
   static Asset parse(std::istream& input);
 
  private:
-  static token_type parseObject(Lexer& lexer, Asset& object);
-  static bool parseProperty(Lexer& lexer, Property& value);
+  static token_type parseObject(Lexer&, Asset&);
+  static bool parseProperty(Lexer&, Asset&);
 };
 
 }

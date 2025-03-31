@@ -3,11 +3,7 @@
 namespace Enjam {
 
 Asset& Asset::operator[](const std::string& name) {
-  if(!std::holds_alternative<object_t>(value)) {
-    value = object_t { };
-  }
-
-  auto& obj = std::get<object_t>(value);
+  auto& obj = ensureType<object_t>();
 
   std::hash<std::string> hash;
   auto nameHash = hash(name);
@@ -28,9 +24,7 @@ Asset& Asset::operator[](size_t index) {
 }
 
 const Asset* Asset::at(const std::string& name) const {
-  if(!std::holds_alternative<object_t>(value)) {
-    return nullptr;
-  }
+  if (!is<object_t>()) { return nullptr; }
 
   auto& obj = std::get<object_t>(value);
   std::hash<std::string> hash;
@@ -43,6 +37,16 @@ const Asset* Asset::at(const std::string& name) const {
   }
 
   return nullptr;
+}
+
+void Asset::pushBack(const Asset& asset) {
+  auto& array = ensureType<array_t>();
+  array.push_back(asset);
+}
+
+void Asset::pushBack(Asset&& asset) {
+  auto& array = ensureType<array_t>();
+  array.push_back(std::move(asset));
 }
 
 }

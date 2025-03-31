@@ -71,6 +71,7 @@ class AssetFileParser {
 
  private:
   static token_type parseObject(Lexer&, Asset&);
+  static token_type parseArray(Lexer&, Asset&);
   static bool parseProperty(Lexer&, Asset&);
 };
 

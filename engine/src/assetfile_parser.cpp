@@ -176,6 +176,13 @@ bool AssetFileParser::parseProperty(Lexer &lexer, Asset& value) {
         }
         return false;
       }
+      case token_type::begin_array: {
+        if(Asset object; parseArray(lexer, object) == token_type::end_array) {
+          value = std::move(object);
+          return true;
+        }
+        return false;
+      }
       case token_type::float_value: {
         value = lexer.getFloat();
         return true;
@@ -195,7 +202,6 @@ bool AssetFileParser::parseProperty(Lexer &lexer, Asset& value) {
       case token_type::uninitialized:
       case token_type::name_separator:
       case token_type::value_separator:
-      case token_type::begin_array:
       case token_type::end_array:
       case token_type::end_object:
       case token_type::end_of_input:
@@ -203,6 +209,20 @@ bool AssetFileParser::parseProperty(Lexer &lexer, Asset& value) {
         return false;
       }
     }
+  }
+}
+AssetFileParser::token_type AssetFileParser::parseArray(Lexer& lexer, Asset& asset) {
+  while(true) {
+    Asset property;
+    if(!parseProperty(lexer, property)) { return token_type::parse_error; }
+    asset.pushBack(std::move(property));
+
+    auto type = lexer.scan();
+    if(type == token_type::value_separator) {
+      continue;
+    }
+
+    return type;
   }
 }
 }

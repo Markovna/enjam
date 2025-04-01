@@ -1,18 +1,13 @@
 #ifndef INCLUDE_ENJAM_ASSET_H_
 #define INCLUDE_ENJAM_ASSET_H_
 
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace Enjam {
 
 class Property;
 class Asset;
-
-struct BufferHash {
-  std::string value;
-};
-
 
 class Asset final {
  public:
@@ -21,7 +16,7 @@ class Asset final {
   using string_t = std::string;
   using object_t = std::vector<Property>;
   using array_t = std::vector<Asset>;
-  using value_t = std::variant<int_t, float_t, string_t, object_t, array_t, BufferHash>;
+  using value_t = std::variant<int_t, float_t, string_t, object_t, array_t>;
 
  public:
   template<class T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
@@ -56,6 +51,7 @@ class Asset final {
   Asset& operator[](size_t);
 
   const Asset* at(const std::string&) const;
+
   void pushBack(const Asset&);
   void pushBack(Asset&&);
 

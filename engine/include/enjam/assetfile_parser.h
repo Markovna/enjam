@@ -21,7 +21,6 @@ class Lexer {
     float_value,
     int_value,
     string_value,
-    hashcode_value,
     name_separator,
     value_separator,
     end_of_input,
@@ -45,7 +44,6 @@ class Lexer {
   int64_t getInt() const { return std::visit([](auto val) -> int64_t { return val; }, numValue); }
 
  private:
-  token_type scanHash();
   token_type scanStr();
   token_type scanNum();
   void clear();

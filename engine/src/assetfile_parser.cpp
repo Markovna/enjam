@@ -20,7 +20,6 @@ Lexer::token_type Lexer::scan() {
     case -1 : { input.get(); return type = token_type::end_of_input; }
 
     case '\"': { return type = scanStr(); }
-    case '#': { return type = scanHash(); }
     default: break;
   }
 
@@ -45,19 +44,6 @@ Lexer::token_type Lexer::scanKey() {
   }
 
   return type = token_type::parse_error;
-}
-
-Lexer::token_type Lexer::scanHash() {
-  if(input.eof()) { return token_type::parse_error; }
-  if(input.peek() != '#') { return token_type::parse_error; }
-
-  input.get();
-
-  while(!input.eof() && std::isalnum(input.peek())) {
-    buffer.push_back(input.get());
-  }
-
-  return token_type::hashcode_value;
 }
 
 Lexer::token_type Lexer::scanStr() {
@@ -93,18 +79,32 @@ Lexer::token_type Lexer::scanNum() {
   }
 
   int floatingPoints = 0;
+  bool isHex = false;
   while(!input.eof()) {
     auto next = input.peek();
-    if(std::isdigit(next)) {
-      buffer.push_back(input.get());
-      continue;
-    }
 
     if(next == '.') {
       if(floatingPoints) {
         return token_type::parse_error;
       }
       floatingPoints++;
+      buffer.push_back(input.get());
+      continue;
+    }
+
+    if(std::isdigit(next)) {
+      buffer.push_back(input.get());
+      continue;
+    }
+
+    if(next == 'x' || next == 'X' ||
+        next == 'A' || next == 'a' ||
+        next == 'B' || next == 'b' ||
+        next == 'C' || next == 'c' ||
+        next == 'D' || next == 'd' ||
+        next == 'E' || next == 'e' ||
+        next == 'F' || next == 'f') {
+      isHex |= true;
       buffer.push_back(input.get());
       continue;
     }
@@ -121,7 +121,7 @@ Lexer::token_type Lexer::scanNum() {
     return token_type::float_value;
   }
 
-  numValue = std::stol(buffer);
+  numValue = std::stol(buffer, nullptr, isHex ? 16 : 10);
   return token_type::int_value;
 }
 
@@ -193,10 +193,6 @@ bool AssetFileParser::parseProperty(Lexer &lexer, Asset& value) {
       }
       case token_type::string_value: {
         value = lexer.getStr();
-        return true;
-      }
-      case token_type::hashcode_value: {
-        //value = BufferHash { .value = lexer.getStr() };
         return true;
       }
       case token_type::uninitialized:

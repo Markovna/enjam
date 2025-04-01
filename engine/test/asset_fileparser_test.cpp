@@ -8,6 +8,7 @@ int main() {
   auto file = "float: 3.14,\n"
               " int  : -42,\n"
               " uint  : 42,\n"
+              " hexadecimal  : 0xdecaf,\n"
               " string : \"this is str \","
               " object: { first: \" first property of nested object \" },"
               " array: [ 1, \"str\", 0.42 ],"
@@ -24,6 +25,9 @@ int main() {
   assert(asset["int"].as<int64_t>() == -42);
   assert(asset["int"].as<int>() == -42);
   assert(asset["uint"].as<unsigned int>() == 42);
+
+  assert(asset["hexadecimal"].is<Asset::int_t>());
+  assert(asset["hexadecimal"].as<size_t>() == 912559);
 
   assert(asset.at("string"));
   assert(asset["string"].is<Asset::string_t>());

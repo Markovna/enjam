@@ -3,42 +3,46 @@
 
 #include <filesystem>
 #include <vector>
+#include <unordered_map>
 #include <memory>
 #include <fstream>
 #include <enjam/asset.h>
+#include <enjam/utils.h>
+#include <enjam/renderer_backend.h>
 
 namespace Enjam {
 
 class Asset;
 
-class AssetBuffer {
- public:
-  AssetBuffer(char* data, size_t size) : buffer() {
-    buffer.reserve(size);
-    for (auto i = 0; i < size; ++i) {
-      buffer.push_back(data[i]);
-    }
-  }
-
- private:
-  std::vector<char> buffer;
-};
-
-template<class T>
-struct AssetSerialization;
-
 class AssetManager {
  public:
   using Path = std::filesystem::path;
+  using BufferStream = std::istream;
 
   explicit AssetManager(const Path& rootPath);
 
-  Asset loadAsset(const Path& path);
-
+  std::shared_ptr<Asset> load(const Path& path);
+  BufferStream loadBuffer(size_t hash);
 
  private:
-  std::filesystem::path rootPath;
+  Path rootPath;
+  std::unordered_map<std::string, std::weak_ptr<Asset>> assetsByPath;
 };
+
+void load(AssetManager& assetManager, RendererBackend& rendererBackend, const utils::Path& path) {
+  auto ptr = assetManager.load(path);
+  if(!ptr) {
+    return;
+  }
+
+  auto& asset = *ptr;
+  auto width = asset["width"].as<int>();
+  auto height = asset["height"].as<int>();
+  auto buffer = assetManager.loadBuffer(asset["data"].as<size_t>());
+
+  auto th = rendererBackend.createTexture(width, height, 1, TextureFormat::RGB8);
+//  rendererBackend.setTextureData(th, 0, 0, 0, 0, width, height, 0, buffer.);
+}
 
 }
 

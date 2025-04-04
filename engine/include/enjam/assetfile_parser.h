@@ -73,6 +73,11 @@ class AssetFileParser {
   static bool parseProperty(Lexer&, Asset&);
 };
 
+class AssetFileSerializer {
+ public:
+  static void dump(const Asset&, std::ostream&);
+};
+
 }
 
 #endif //INCLUDE_ENJAM_ASSETFILE_PARSER_H_

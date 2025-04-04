@@ -1,4 +1,5 @@
 #include <enjam/asset.h>
+#include "enjam/type_traits_helpers.h"
 
 namespace Enjam {
 
@@ -14,7 +15,7 @@ Asset& Asset::operator[](const std::string& name) {
     return it->value;
   }
 
-  obj.push_back(Property { .nameHash = nameHash, .value = { } });
+  obj.push_back(Property { .name = name, .nameHash = nameHash, .value = { } });
   return obj.back().value;
 }
 

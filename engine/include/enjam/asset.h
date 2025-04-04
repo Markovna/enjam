@@ -31,6 +31,11 @@ class Asset final {
   template<class T>
   bool is() const { return std::holds_alternative<T>(value); }
 
+  template<class TVisitor>
+  decltype(auto) visit(TVisitor&& visitor) const {
+    return std::visit(std::forward<TVisitor>(visitor), value);
+  }
+
   Asset() = default;
   Asset(const Asset&) = default;
   Asset(Asset&&) = default;
@@ -41,7 +46,7 @@ class Asset final {
   template<class T, std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
   Asset& operator=(T);
 
-  template<class T, std::enable_if_t<std::is_same<T, string_t>::value, bool> = true>
+  template<class T, std::enable_if_t<std::is_convertible<T, string_t>::value, bool> = true>
   Asset& operator=(T&&);
 
   Asset& operator=(const Asset&) = default;
@@ -72,6 +77,7 @@ class Asset final {
 };
 
 struct Property final {
+  std::string name;
   uint64_t nameHash;
   Asset value;
 };
@@ -103,7 +109,7 @@ Asset& Asset::operator=(T arg) {
   return *this;
 }
 
-template<class T, std::enable_if_t<std::is_same<T, std::string>::value, bool>>
+template<class T, std::enable_if_t<std::is_convertible<T, std::string>::value, bool>>
 Asset& Asset::operator=(T&& arg) {
   value = std::forward<T>(arg);
   return *this;

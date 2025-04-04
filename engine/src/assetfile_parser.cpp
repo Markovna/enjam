@@ -1,5 +1,7 @@
 #include <enjam/assetfile_parser.h>
 #include <enjam/asset.h>
+#include <enjam/type_traits_helpers.h>
+#include <fmt/format.h>
 
 namespace Enjam {
 
@@ -207,6 +209,7 @@ bool AssetFileParser::parseProperty(Lexer &lexer, Asset& value) {
     }
   }
 }
+
 AssetFileParser::token_type AssetFileParser::parseArray(Lexer& lexer, Asset& asset) {
   while(true) {
     Asset property;
@@ -221,4 +224,38 @@ AssetFileParser::token_type AssetFileParser::parseArray(Lexer& lexer, Asset& ass
     return type;
   }
 }
+
+void AssetFileSerializer::dump(const Asset& asset, std::ostream& out) {
+  asset.visit(overloaded {
+    [&out](auto& val) { out << val; },
+    [&out](const Asset::string_t& val) {
+      out << "\"" << val << "\"";
+    },
+    [&out](const Asset::array_t& val) {
+      out << '[';
+      for(auto i = 0 ; i < val.size(); i++) {
+        auto& item = val[i];
+        AssetFileSerializer::dump(item, out);
+        if(i < val.size() - 1) {
+          out << ',';
+        }
+      }
+      out << ']';
+    },
+    [&out](const Asset::object_t& val) {
+      out << '{';
+      size_t i = 0;
+      for(auto& prop : val) {
+        out << prop.name << ":";
+        AssetFileSerializer::dump(prop.value, out);
+        if(i < val.size() - 1) {
+          out << ',';
+        }
+        i++;
+      }
+      out << '}';
+    }
+  });
+}
+
 }

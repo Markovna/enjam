@@ -1,4 +1,5 @@
 #include <sstream>
+#include <iostream>
 #include "enjam/asset.h"
 #include "enjam/assetfile_parser.h"
 
@@ -43,4 +44,17 @@ int main() {
   assert(asset["array"][2].is<Asset::float_t>());
 
   assert(asset.at("property_name1"));
+
+  Asset newAsset;
+  newAsset["float"] = 3.14;
+  newAsset["int"] = -42;
+  newAsset["uint"] = 42;
+
+  std::string str("this is str ");
+  newAsset["str"] = str;
+
+  Asset& nested = newAsset["object"];
+  nested["first"] = " first property of nested object ";
+
+  AssetFileSerializer::dump(newAsset, std::cout);
 }

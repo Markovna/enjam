@@ -17,12 +17,12 @@ class Asset;
 class AssetManager {
  public:
   using Path = std::filesystem::path;
-  using BufferStream = std::istream;
+  using Stream = std::unique_ptr<std::istream>;
 
   explicit AssetManager(const Path& rootPath);
 
   std::shared_ptr<Asset> load(const Path& path);
-  BufferStream loadBuffer(size_t hash);
+  Stream loadBuffer(const Path&, size_t);
 
  private:
   Path rootPath;
@@ -38,7 +38,7 @@ void load(AssetManager& assetManager, RendererBackend& rendererBackend, const ut
   auto& asset = *ptr;
   auto width = asset["width"].as<int>();
   auto height = asset["height"].as<int>();
-  auto buffer = assetManager.loadBuffer(asset["data"].as<size_t>());
+  auto buffer = assetManager.loadBuffer(path, asset["data"].as<size_t>());
 
   auto th = rendererBackend.createTexture(width, height, 1, TextureFormat::RGB8);
 //  rendererBackend.setTextureData(th, 0, 0, 0, 0, width, height, 0, buffer.);

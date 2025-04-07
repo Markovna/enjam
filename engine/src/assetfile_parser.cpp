@@ -1,7 +1,5 @@
 #include <enjam/assetfile_parser.h>
 #include <enjam/asset.h>
-#include <enjam/type_traits_helpers.h>
-#include <fmt/format.h>
 
 namespace Enjam {
 
@@ -133,21 +131,7 @@ void Lexer::clear() {
   type = token_type::uninitialized;
 }
 
-bool AssetFileParser::parse(std::istream &input, Asset &asset) {
-  Lexer lexer { input };
-  return parseObject(lexer, asset) == token_type::end_of_input;
-}
-
-Asset AssetFileParser::parse(std::istream& input) {
-  Lexer lexer { input };
-  Asset asset;
-  if(parseObject(lexer, asset) != token_type::end_of_input) {
-    asset.clear();
-  }
-  return asset;
-}
-
-AssetFileParser::token_type AssetFileParser::parseObject(Lexer &lexer, Asset& object) {
+AssetFileParser::token_type AssetFileParser::parseObject(Asset& object) {
   std::hash<std::string> hash;
   while(true) {
     if(lexer.scanKey() != token_type::string_value) { return token_type::parse_error; }
@@ -156,7 +140,7 @@ AssetFileParser::token_type AssetFileParser::parseObject(Lexer &lexer, Asset& ob
     if(lexer.scan() != token_type::name_separator) { return token_type::parse_error; }
 
     Asset property;
-    if(!parseProperty(lexer, object[key])) { return token_type::parse_error; }
+    if(!parseProperty(object[key])) { return token_type::parse_error; }
 
     auto type = lexer.scan();
     if(type == token_type::value_separator) {
@@ -167,19 +151,19 @@ AssetFileParser::token_type AssetFileParser::parseObject(Lexer &lexer, Asset& ob
   }
 }
 
-bool AssetFileParser::parseProperty(Lexer &lexer, Asset& value) {
+bool AssetFileParser::parseProperty(Asset& value) {
   while(true) {
     auto type = lexer.scan();
     switch(type) {
       case token_type::begin_object: {
-        if(Asset object; parseObject(lexer, object) == token_type::end_object) {
+        if(Asset object; parseObject(object) == token_type::end_object) {
           value = std::move(object);
           return true;
         }
         return false;
       }
       case token_type::begin_array: {
-        if(Asset object; parseArray(lexer, object) == token_type::end_array) {
+        if(Asset object; parseArray(object) == token_type::end_array) {
           value = std::move(object);
           return true;
         }
@@ -210,10 +194,10 @@ bool AssetFileParser::parseProperty(Lexer &lexer, Asset& value) {
   }
 }
 
-AssetFileParser::token_type AssetFileParser::parseArray(Lexer& lexer, Asset& asset) {
+AssetFileParser::token_type AssetFileParser::parseArray(Asset& asset) {
   while(true) {
     Asset property;
-    if(!parseProperty(lexer, property)) { return token_type::parse_error; }
+    if(!parseProperty(property)) { return token_type::parse_error; }
     asset.pushBack(std::move(property));
 
     auto type = lexer.scan();
@@ -225,37 +209,32 @@ AssetFileParser::token_type AssetFileParser::parseArray(Lexer& lexer, Asset& ass
   }
 }
 
-void AssetFileSerializer::dump(const Asset& asset, std::ostream& out) {
-  asset.visit(overloaded {
-    [&out](auto& val) { out << val; },
-    [&out](const Asset::string_t& val) {
-      out << "\"" << val << "\"";
-    },
-    [&out](const Asset::array_t& val) {
-      out << '[';
-      for(auto i = 0 ; i < val.size(); i++) {
-        auto& item = val[i];
-        AssetFileSerializer::dump(item, out);
-        if(i < val.size() - 1) {
-          out << ',';
-        }
-      }
-      out << ']';
-    },
-    [&out](const Asset::object_t& val) {
-      out << '{';
-      size_t i = 0;
-      for(auto& prop : val) {
-        out << prop.name << ":";
-        AssetFileSerializer::dump(prop.value, out);
-        if(i < val.size() - 1) {
-          out << ',';
-        }
-        i++;
-      }
-      out << '}';
-    }
-  });
+AssetFileParser::AssetFileParser(std::istream& input) : lexer(input) {
+
+}
+
+Asset AssetFileParser::parse() {
+  Asset asset;
+  if(parseObject(asset) != token_type::end_of_input) {
+    asset.clear();
+  }
+  return asset;
+}
+
+bool AssetFileParser::parse(Asset& asset) {
+  if(parseObject(asset) != token_type::end_of_input) {
+    asset.clear();
+    return false;
+  }
+  return true;
+}
+
+Asset AssetFileParser::operator()() {
+  return parse();
+}
+
+bool AssetFileParser::operator()(Asset& asset) {
+  return parse(asset);
 }
 
 }

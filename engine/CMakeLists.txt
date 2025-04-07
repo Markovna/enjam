@@ -13,7 +13,7 @@ set(ENJAM_SOURCES
         src/platform.cpp
         src/utils.cpp
         src/application.cpp
-        src/assetfile_parser.cpp src/asset_manager.cpp src/asset.cpp)
+        src/assetfile_parser.cpp src/asset_manager.cpp src/asset.cpp src/assetfile_serializer.cpp)
 
 set(ENJAM_HEADERS
         include/enjam/assert.h
@@ -41,10 +41,9 @@ set(ENJAM_HEADERS
         include/enjam/simulation.h
         include/enjam/material.h
         include/enjam/asset.h
-        include/enjam/assetfile_parser.h include/enjam/asset_manager.h)
+        include/enjam/assetfile_parser.h include/enjam/asset_manager.h include/enjam/assetfile_serializer.h)
 
-add_library(enjam STATIC ${ENJAM_SOURCES} ${ENJAM_HEADERS})
-
+add_library(enjam SHARED ${ENJAM_SOURCES} ${ENJAM_HEADERS})
 target_include_directories(enjam PUBLIC include)
 
 target_link_libraries(enjam PUBLIC fmt)

@@ -2,6 +2,7 @@
 #include <iostream>
 #include "enjam/asset.h"
 #include "enjam/assetfile_parser.h"
+#include "enjam/assetfile_serializer.h"
 
 int main() {
   using namespace Enjam;
@@ -17,7 +18,8 @@ int main() {
 
   std::stringstream input { file };
   Asset asset;
-  bool succeed = AssetFileParser::parse(input, asset);
+  AssetFileParser parser {input};
+  bool succeed = parser(asset);
   assert(succeed);
 
   assert(asset["float"].as<float_t>() == 3.14f);
@@ -56,5 +58,11 @@ int main() {
   Asset& nested = newAsset["object"];
   nested["first"] = " first property of nested object ";
 
-  AssetFileSerializer::dump(newAsset, std::cout);
+  Asset& nested2 = nested["second"];
+  nested2["second_0"] = "we need to go deeper";
+  nested2["second_1"] = 0;
+
+  AssetFileSerializer()(newAsset, std::cout);
+  std::cout << "\n";
+  AssetFileSerializer().setFlags(AssetFileSerializer::pretty | AssetFileSerializer::omitFirstEnclosure)(newAsset, std::cout);
 }

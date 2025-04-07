@@ -64,18 +64,21 @@ class AssetFileParser {
   using token_type = Lexer::token_type;
 
  public:
-  static bool parse(std::istream& input, Asset& asset);
-  static Asset parse(std::istream& input);
+  explicit AssetFileParser(std::istream& input);
+
+  Asset parse();
+  bool parse(Asset&);
+
+  Asset operator()();
+  bool operator()(Asset&);
 
  private:
-  static token_type parseObject(Lexer&, Asset&);
-  static token_type parseArray(Lexer&, Asset&);
-  static bool parseProperty(Lexer&, Asset&);
-};
+  token_type parseObject(Asset&);
+  token_type parseArray(Asset&);
+  bool parseProperty(Asset&);
 
-class AssetFileSerializer {
- public:
-  static void dump(const Asset&, std::ostream&);
+ private:
+  Lexer lexer;
 };
 
 }

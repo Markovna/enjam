@@ -2,7 +2,7 @@
 #include <stb_image/stb_image.h>
 #include <unordered_set>
 
-void generateAsset(const std::filesystem::path& inputPath, const std::filesystem::path& outputPath) {
+bool generateAsset(const std::filesystem::path& inputPath, const std::filesystem::path& outputPath) {
   using namespace Enjam;
 
   const std::unordered_set<std::string> supportedExtensions {
@@ -12,7 +12,7 @@ void generateAsset(const std::filesystem::path& inputPath, const std::filesystem
   std::filesystem::path ext = inputPath.extension();
   if(supportedExtensions.find(ext.string()) == supportedExtensions.end()) {
     ENJAM_ERROR("Files with extension {} are not supported", ext.string());
-    return;
+    return false;
   }
 
   int width, height, channels;
@@ -32,26 +32,46 @@ void generateAsset(const std::filesystem::path& inputPath, const std::filesystem
   assetManager.save(outputPath, asset);
 
   stbi_image_free(data);
+  return true;
 }
 
 int main(int argc, char* argv[]) {
-  using namespace Enjam;
-
   std::filesystem::path output;
   std::filesystem::path input;
 
-  char option = 0;
-  for(auto i = 0; i < argc; i++) {
-    ENJAM_INFO("{}", argv[i]);
-    if(argv[i][0] == '-') {
-      option = argv[i][1];
+  std::vector<std::string_view> args {argv + 1, argv + argc};
+
+  auto it = args.begin();
+  while(it != args.end()) {
+    auto& arg = *it;
+    if(arg.empty()) {
+      it++;
+      continue;
     }
 
+    if(arg[0] == '-') {
+      if(arg == "-o") {
+        it++;
+        output = *it;
+      } else {
+        throw std::runtime_error("Unknown option: " + std::string(*it));
+      }
+      it++;
+      continue;
+    }
+
+    input = arg;
+    it++;
   }
 
+  if(input.empty()) {
+    throw std::runtime_error("Input file path is not provided");
+  }
 
-//  generateAsset(
-//      "/Users/kamila/CLionProjects/enjam/sandbox/textures/dummy.png",
-//      "/Users/kamila/CLionProjects/enjam/sandbox/assets/textures/dummy.nj_tex"
-//      );
+  if(output.empty()) {
+    output = input;
+    output.replace_extension("nj_tex");
+  }
+
+  generateAsset(input, output);
 }

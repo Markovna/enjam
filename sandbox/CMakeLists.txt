@@ -17,23 +17,28 @@ set(TEXTURES
         textures/dummy.png
         )
 
-foreach (resource ${RESOURCES})
-    set(output_path "${CMAKE_CURRENT_BINARY_DIR}/${resource}")
-    configure_file(${resource} ${output_path} COPYONLY)
-#    list(APPEND SHADER_BINS ${output_path})
-endforeach()
 
-set(ASSETS_DIR ${CMAKE_SOURCE_DIR}/assets)
+set(ASSETS_DIR assets)
 
 foreach (tex ${TEXTURES})
     get_filename_component(localname "${tex}" NAME_WE)
     get_filename_component(fullname "${tex}" ABSOLUTE)
+
     set(output_path "${ASSETS_DIR}/textures/${localname}.nj_tex")
+    get_filename_component(full_output ${output_path} ABSOLUTE)
+
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND njtex -o ${output_path} ${fullname}
+            COMMAND njtex -o ${full_output} ${fullname}
             MAIN_DEPENDENCY ${tex}
             DEPENDS njtex
             COMMENT "Generating asset file ${tex} to ${output_path}"
     )
+    list(APPEND RESOURCES ${output_path})
+endforeach()
+
+foreach (resource ${RESOURCES})
+    set(output_path "${CMAKE_CURRENT_BINARY_DIR}/${resource}")
+    configure_file(${resource} ${output_path} COPYONLY)
+    #    list(APPEND SHADER_BINS ${output_path})
 endforeach()

@@ -7,9 +7,7 @@ target_link_libraries(sandbox enjam)
 add_library(game SHARED src/game.cpp)
 target_link_libraries(game enjam)
 
-set(RESOURCES
-        textures/dummy.png
-        textures/dummy.jpg
+set(SHADERS
         shaders/vertex.glsl
         shaders/fragment.glsl)
 
@@ -34,10 +32,11 @@ foreach (tex ${TEXTURES})
             DEPENDS njtex
             COMMENT "Generating asset file ${tex} to ${output_path}"
     )
-    list(APPEND RESOURCES ${output_path})
 endforeach()
 
-foreach (resource ${RESOURCES})
+file(COPY ${ASSETS_DIR} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+
+foreach (resource ${SHADERS})
     set(output_path "${CMAKE_CURRENT_BINARY_DIR}/${resource}")
     configure_file(${resource} ${output_path} COPYONLY)
     #    list(APPEND SHADER_BINS ${output_path})

@@ -3,10 +3,10 @@
 
 namespace Enjam {
 
-Asset& Asset::operator[](const std::string& name) {
+Asset& Asset::operator[](const std::string_view& name) {
   auto& obj = ensureType<object_t>();
 
-  std::hash<std::string> hash;
+  std::hash<std::string_view> hash;
   auto nameHash = hash(name);
   auto it = std::find_if(obj.begin(),
                          obj.end(),
@@ -15,7 +15,7 @@ Asset& Asset::operator[](const std::string& name) {
     return it->value;
   }
 
-  obj.push_back(Property { .name = name, .nameHash = nameHash, .value = { } });
+  obj.push_back(Property { .name = std::string { name }, .nameHash = nameHash, .value = { } });
   return obj.back().value;
 }
 

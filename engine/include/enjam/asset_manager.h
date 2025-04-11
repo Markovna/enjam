@@ -18,11 +18,14 @@ class AssetManager {
  public:
   using Path = std::filesystem::path;
   using Stream = std::unique_ptr<std::istream>;
+  using Buffer = std::vector<char>;
 
   explicit AssetManager(const Path& rootPath = {});
 
   std::shared_ptr<Asset> load(const Path& path);
-  Stream loadBuffer(const Path&, size_t);
+  Stream loadBufferAsStream(const Path&, size_t);
+
+  Buffer loadBuffer(const Path&, size_t);
 
   void save(const Path& path, Asset& asset);
   size_t saveBuffer(const Path& path, const char*, size_t);

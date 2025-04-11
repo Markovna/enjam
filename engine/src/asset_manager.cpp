@@ -12,10 +12,35 @@ AssetManager::AssetManager(const Path& rootPath)
   , assetsByPath()
   { }
 
+AssetManager::Stream AssetManager::loadBufferAsStream(const Path& path, size_t hash) {
+  auto fullPath = (rootPath / path).replace_extension() / std::to_string(hash);
+  auto stream = std::make_unique<std::ifstream>(fullPath, std::ios::in | std::ios::binary);
+  if(!(*stream)) {
+    ENJAM_ERROR("Loading buffer failed {}", fullPath.c_str());
+    return { };
+  }
 
-AssetManager::Stream AssetManager::loadBuffer(const Path& path, size_t hash) {
-  auto fullPath = (rootPath / path).replace_extension() / fmt::format("{:x}", hash);
-  return AssetManager::Stream { new std::ifstream { fullPath } };
+  return AssetManager::Stream { std::move(stream) };
+}
+
+AssetManager::Buffer AssetManager::loadBuffer(const Path& path, size_t hash) {
+  auto fullPath = (rootPath / path).replace_extension() / std::to_string(hash);
+  auto stream = std::ifstream(fullPath, std::ios::in | std::ios::binary);
+  if(!stream) {
+    ENJAM_ERROR("Loading buffer failed {}", fullPath.c_str());
+    return { };
+  }
+
+  AssetManager::Buffer buf;
+  stream.seekg(0, std::ios::end);
+  auto size = stream.tellg();
+  if (size) {
+    stream.seekg(0, std::ios::beg);
+    buf.resize(size);
+    stream.read(&buf.front(), size);
+  }
+
+  return buf;
 }
 
 void AssetManager::save(const Path& path, Asset& asset) {

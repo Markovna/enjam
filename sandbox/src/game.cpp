@@ -1,5 +1,6 @@
 #include "game.h"
 #include <enjam/application.h>
+#include <enjam/asset_manager.h>
 #include <enjam/simulation.h>
 #include <enjam/dependencies.h>
 #include <enjam/log.h>
@@ -16,11 +17,13 @@
 class SandboxSimulation : public Enjam::Simulation {
  public:
   SandboxSimulation(Enjam::Renderer &renderer,
+                    Enjam::AssetManager& assetManager,
                     Enjam::Input &input,
                     Enjam::RendererBackend &rendererBackend,
                     Enjam::Camera &camera,
                     Enjam::Scene &scene)
       : renderer(renderer)
+      , assetManager(assetManager)
       , input(input)
       , rendererBackend(rendererBackend)
       , camera(camera)
@@ -108,12 +111,21 @@ class SandboxSimulation : public Enjam::Simulation {
     });
 
     {
-      int width, height, nrChannels;
-      unsigned char *data = stbi_load("textures/dummy.png", &width, &height, &nrChannels, 0);
-      ENJAM_ASSERT(data != nullptr);
+      std::filesystem::path path = "assets/textures/dummy.nj_tex";
+      auto asset = assetManager.load(path);
+      if(!asset) {
+        ENJAM_ERROR("Couldn't load asset");
+      }
+      int width = (*asset)["width"].as<int>();
+      int height = (*asset)["height"].as<int>();
+      int channels = (*asset)["channels"].as<int>();
+      auto dataHash = (*asset)["data"].as<size_t>();
+      auto data = assetManager.loadBuffer(path, dataHash);
+      if(data.empty()) {
+        ENJAM_ERROR("Failed to load texture data!");
+      }
       auto th = rendererBackend.createTexture(width, height, 1, Enjam::TextureFormat::RGB8);
-      rendererBackend.setTextureData(th, 0, 0, 0, 0, width, height, 0, data);
-      stbi_image_free(data);
+      rendererBackend.setTextureData(th, 0, 0, 0, 0, width, height, 0, data.data());
       rendererBackend.updateDescriptorSetTexture(descriptorSetHandle, 0, th);
     }
 
@@ -160,6 +172,7 @@ class SandboxSimulation : public Enjam::Simulation {
   }
 
  private:
+  Enjam::AssetManager& assetManager;
   Enjam::Renderer& renderer;
   Enjam::Input& input;
   Enjam::RendererBackend& rendererBackend;
@@ -193,7 +206,7 @@ class SandboxSimulation : public Enjam::Simulation {
 
 void loadLib(Enjam::Injector& injector) {
 
-  injector.bind<njctr::IFactory<Enjam::Simulation()>>().to<njctr::Factory<SandboxSimulation(Enjam::Renderer&, Enjam::Input&, Enjam::RendererBackend&, Enjam::Camera&, Enjam::Scene&)>>();
+  injector.bind<njctr::IFactory<Enjam::Simulation()>>().to<njctr::Factory<SandboxSimulation(Enjam::Renderer&, Enjam::AssetManager&, Enjam::Input&, Enjam::RendererBackend&, Enjam::Camera&, Enjam::Scene&)>>();
 
   ENJAM_INFO("Game loaded!");
 };

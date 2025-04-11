@@ -5,6 +5,7 @@
 
 namespace Enjam {
 
+class AssetManager;
 class Simulation;
 class Renderer;
 class Input;
@@ -14,6 +15,7 @@ class Camera;
 
 using Injector = njctr::Injector<
     njctr::IFactory<Simulation()>,
+    njctr::SharedResolver<AssetManager>,
     njctr::SharedResolver<Renderer>,
     njctr::SharedResolver<Input>,
     njctr::SharedResolver<RendererBackend>,

@@ -53,6 +53,7 @@ bool RendererBackendOpengl::init() {
     return false;
   }
 
+  glEnable(GL_DEPTH_TEST);
   glGenVertexArrays(1, &defaultVertexArray);
   GL_CHECK_ERRORS();
 
@@ -67,7 +68,7 @@ void RendererBackendOpengl::beginFrame() {
   swapChain.makeCurrent();
 
   glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   GL_CHECK_ERRORS();
 }
@@ -373,6 +374,7 @@ void RendererBackendOpengl::setTextureData(
   glTexSubImage2D(t->target, GLint(level),
                   GLint(xoffset), GLint(yoffset),
                   GLsizei(width), GLsizei(height), pixelFormat, pixelType, data);
+  GL_CHECK_ERRORS();
 }
 
 void RendererBackendOpengl::destroyTexture(TextureHandle th) {

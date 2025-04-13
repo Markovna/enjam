@@ -19,8 +19,8 @@ bool generateAsset(const std::filesystem::path& inputPath, const std::filesystem
   auto data = stbi_load(inputPath.c_str(), &width, &height, &channels, 0);
 
   auto size = width * height * channels;
-  AssetManager assetManager;
-  auto texDataHash = assetManager.saveBuffer(outputPath, reinterpret_cast<char*>(data), size);
+  AssetsFilesystemRep repository;
+  auto texDataHash = repository.saveBuffer(outputPath, reinterpret_cast<char*>(data), size);
 
   Asset asset;
   asset["source"] = inputPath;
@@ -29,7 +29,7 @@ bool generateAsset(const std::filesystem::path& inputPath, const std::filesystem
   asset["channels"] = channels;
   asset["data"] = texDataHash;
 
-  assetManager.save(outputPath, asset);
+  repository.save(outputPath, asset);
 
   stbi_image_free(data);
   return true;

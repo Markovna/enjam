@@ -167,7 +167,7 @@ class ENJAM_API RendererBackend {
 
   virtual TextureHandle createTexture(uint32_t width, uint32_t height, uint8_t levels, TextureFormat format) = 0;
   virtual void setTextureData(TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-                              uint32_t width, uint32_t height, uint32_t depth, void* data) = 0;
+                              uint32_t width, uint32_t height, uint32_t depth, const void* data) = 0;
   virtual void destroyTexture(TextureHandle) = 0;
 };
 

@@ -364,7 +364,7 @@ TextureHandle RendererBackendOpengl::createTexture(uint32_t width, uint32_t heig
 
 void RendererBackendOpengl::setTextureData(
     TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-    uint32_t width, uint32_t height, uint32_t depth, void* data) {
+    uint32_t width, uint32_t height, uint32_t depth, const void* data) {
   auto t = handleAllocator.cast<GLTexture*>(th);
 
   GLenum pixelFormat = OpenGL::toGLPixelFormat(t->glFormat);

@@ -136,7 +136,7 @@ class RendererBackendOpengl : public RendererBackend {
 
   TextureHandle createTexture(uint32_t width, uint32_t height, uint8_t levels, TextureFormat format) override;
   void setTextureData(TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-                      uint32_t width, uint32_t height, uint32_t depth, void* data) override;
+                      uint32_t width, uint32_t height, uint32_t depth, const void* data) override;
   void destroyTexture(TextureHandle) override;
 
  private:

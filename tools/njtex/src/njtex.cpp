@@ -1,4 +1,4 @@
-#include <enjam/asset_manager.h>
+#include <enjam/assets_repository.h>
 #include <stb_image/stb_image.h>
 #include <unordered_set>
 

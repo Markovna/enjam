@@ -1,4 +1,4 @@
-#include <enjam/asset_manager.h>
+#include <enjam/assets_repository.h>
 #include <enjam/assetfile_parser.h>
 #include <enjam/assetfile_serializer.h>
 #include <enjam/asset.h>
@@ -8,9 +8,9 @@
 namespace Enjam {
 
 struct BufferFileLoader {
-  AssetsRepository::Path path;
+  AssetsLoader::Path path;
 
-  AssetsRepository::Buffer operator()(size_t hash) {
+  AssetRoot::Buffer operator()(size_t hash) {
     auto fullPath = path / std::to_string(hash);
     auto stream = std::ifstream(fullPath, std::ios::in | std::ios::binary);
     if(!stream) {
@@ -18,7 +18,7 @@ struct BufferFileLoader {
       return { };
     }
 
-    AssetsRepository::Buffer buf;
+    AssetRoot::Buffer buf;
     stream.seekg(0, std::ios::end);
     auto size = stream.tellg();
     if (size) {
@@ -62,7 +62,7 @@ size_t AssetsFilesystemRep::saveBuffer(const Path& path, const char* data, size_
   return hash;
 }
 
-AssetManager::AssetRef AssetManager::load(const Path& path) {
+AssetsRepository::Ref AssetsRepository::load(const Path& path) {
   std::shared_ptr<AssetRoot> assetPtr;
 
   auto it = assetsByPath.find(path);
@@ -71,14 +71,14 @@ AssetManager::AssetRef AssetManager::load(const Path& path) {
   }
 
   if(!assetPtr) {
-    assetPtr = std::make_shared<AssetRoot>(repository.load(path));
+    assetPtr = std::make_shared<AssetRoot>(loader.load(path));
     assetsByPath[path] = assetPtr;
   }
 
   return assetPtr;
 }
 
-AssetRoot AssetsFilesystemRep::load(const AssetsRepository::Path& path) {
+AssetRoot AssetsFilesystemRep::load(const AssetsLoader::Path& path) {
   auto fullPath = rootPath / path;
   std::ifstream file(fullPath);
 

@@ -11,28 +11,32 @@
 #include <enjam/utils.h>
 #include <enjam/renderer_backend.h>
 
+// TODO:
+// 1. Support reference assets by UUID
+// 2. Implement Assets Binary Archive loading
+
 namespace Enjam {
 
 class Asset;
 class AssetRoot;
 
-class AssetsRepository {
+class AssetsLoader {
  public:
   using Path = std::filesystem::path;
-  using Buffer = std::vector<char>;
 
   virtual AssetRoot load(const Path& path) = 0;
 };
 
 struct AssetRoot {
-  using BufferLoader = std::function<AssetsRepository::Buffer(size_t)>;
+  using Buffer = std::vector<char>;
+  using BufferLoader = std::function<Buffer(size_t)>;
 
   Asset asset;
-  AssetsRepository::Path path;
+  AssetsLoader::Path path;
   BufferLoader bufferLoader;
 };
 
-class AssetsFilesystemRep : public AssetsRepository {
+class AssetsFilesystemRep : public AssetsLoader {
  public:
   explicit AssetsFilesystemRep(Path path = {}) : rootPath(std::move(path)) { }
 
@@ -45,26 +49,26 @@ class AssetsFilesystemRep : public AssetsRepository {
   Path rootPath;
 };
 
-class AssetsBinaryArchiveRep : public AssetsRepository {
+class AssetsBinaryArchiveRep : public AssetsLoader {
   // TODO
 };
 
-class AssetManager {
+class AssetsRepository {
  public:
-  using Path = AssetsRepository::Path;
-  using AssetRef = std::shared_ptr<AssetRoot>;
+  using Path = AssetsLoader::Path;
+  using Ref = std::shared_ptr<AssetRoot>;
 
-  explicit AssetManager(AssetsRepository& repository)
-    : repository(repository)
+  explicit AssetsRepository(AssetsLoader& loader)
+    : loader(loader)
     , assetsByPath() {
 
   }
 
-  AssetRef load(const Path& path);
+  Ref load(const Path& path);
 
  private:
   std::unordered_map<std::string, std::weak_ptr<AssetRoot>> assetsByPath;
-  AssetsRepository& repository;
+  AssetsLoader& loader;
 };
 
 }

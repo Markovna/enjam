@@ -11,55 +11,48 @@ Lexer::token_type Lexer::scan() {
 
   auto next = input.peek();
   switch (next) {
-    case '{': { input.get(); return type = token_type::begin_object; }
-    case '}': { input.get(); return type = token_type::end_object; }
-    case '[': { input.get(); return type = token_type::begin_array; }
-    case ']': { input.get(); return type = token_type::end_array; }
-    case ':': { input.get(); return type = token_type::name_separator; }
-    case ',': { input.get(); return type = token_type::value_separator; }
-    case -1 : { input.get(); return type = token_type::end_of_input; }
-
-    case '\"': { return type = scanStr(); }
+    case '{': { input.get(); return token_type::begin_object; }
+    case '}': { input.get(); return token_type::end_object; }
+    case '[': { input.get(); return token_type::begin_array; }
+    case ']': { input.get(); return token_type::end_array; }
+    case ':': { input.get(); return token_type::name_separator; }
+    case ',': { input.get(); return token_type::value_separator; }
+    case -1 : { input.get(); return token_type::end_of_input; }
+    case '\"': { input.get(); return scanStr(true); }
     default: break;
+  }
+
+  if(std::isalpha(next) || next == '_') {
+    return scanStr(false);
   }
 
   return scanNum();
 }
 
-Lexer::token_type Lexer::scanKey() {
-  clear();
-  skipWhitespace(input);
-
-  while(!input.eof()) {
-    auto current = input.peek();
-    if(current == ' ' || current == ':') {
-      return type = token_type::string_value;
-    }
-
-    if(!std::isalnum(current) && current != '_') {
-      return type = token_type::parse_error;
-    }
-
-    buffer.push_back(input.get());
-  }
-
-  return type = token_type::parse_error;
-}
-
-Lexer::token_type Lexer::scanStr() {
+Lexer::token_type Lexer::scanStr(bool quoted) {
   if(input.eof()) { return token_type::parse_error; }
-  if(input.peek() != '\"') { return token_type::parse_error; }
-
-  input.get();
 
   while(!input.eof()) {
-    auto current = input.get();
-    if(current == '\"') { return token_type::string_value; }
+    auto next = input.peek();
+    if(next == '\"') {
+      if(quoted) {
+        input.get();
+      }
 
-    buffer.push_back(current);
+      return token_type::string_value;
+    }
+
+    if(!quoted) {
+      if(!std::isalnum(next) && next != '_') {
+        return token_type::string_value;
+      }
+    }
+
+    buffer.push_back(next);
+    input.get();
   }
 
-  return token_type::parse_error;
+  return token_type::string_value;
 }
 
 void Lexer::skipWhitespace(std::istream &input) {
@@ -128,19 +121,17 @@ Lexer::token_type Lexer::scanNum() {
 void Lexer::clear() {
   buffer.clear();
   numValue = { };
-  type = token_type::uninitialized;
 }
 
 AssetFileParser::token_type AssetFileParser::parseObject(Asset& object) {
   std::hash<std::string> hash;
   while(true) {
-    if(lexer.scanKey() != token_type::string_value) { return token_type::parse_error; }
-    auto key = lexer.getStr();
+    if(lexer.scan() != token_type::string_value) { return token_type::parse_error; }
+    auto& property = object[lexer.getStr()];
 
     if(lexer.scan() != token_type::name_separator) { return token_type::parse_error; }
 
-    Asset property;
-    if(!parseProperty(object[key])) { return token_type::parse_error; }
+    if(!parseProperty(property)) { return token_type::parse_error; }
 
     auto type = lexer.scan();
     if(type == token_type::value_separator) {
@@ -178,10 +169,9 @@ bool AssetFileParser::parseProperty(Asset& value) {
         return true;
       }
       case token_type::string_value: {
-        value = lexer.getStr();
+        value = std::string { lexer.getStr() };
         return true;
       }
-      case token_type::uninitialized:
       case token_type::name_separator:
       case token_type::value_separator:
       case token_type::end_array:

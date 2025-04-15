@@ -13,7 +13,6 @@ class Property;
 class Lexer {
  public:
   enum class token_type {
-    uninitialized,
     begin_object,
     end_object,
     begin_array,
@@ -31,30 +30,25 @@ class Lexer {
   using char_traits = std::char_traits<char>;
 
  public:
-  explicit Lexer(std::istream& input) : input(input), numValue(), type(token_type::uninitialized), buffer() { }
+  explicit Lexer(std::istream& input) : input(input), numValue(), buffer() { }
 
   token_type scan();
 
-  token_type scanKey();
-
-  token_type getType() const { return type; }
-
-  std::string getStr() const { return buffer; }
+  std::string_view getStr() const { return buffer; }
   float getFloat() const { return std::visit([](auto val) -> float_t { return val; }, numValue); }
   int64_t getInt() const { return std::visit([](auto val) -> int64_t { return val; }, numValue); }
 
  private:
-  token_type scanStr();
+  static void skipWhitespace(std::istream& input);
+
+  token_type scanStr(bool quoted);
   token_type scanNum();
   void clear();
-
-  static void skipWhitespace(std::istream& input);
 
  private:
   using numeric_value_t = std::variant<float_t, int64_t>;
 
   std::istream& input;
-  token_type type;
   numeric_value_t numValue;
   std::string buffer;
 };

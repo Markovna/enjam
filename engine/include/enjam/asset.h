@@ -91,6 +91,17 @@ class AssetIterator {
   iterator it;
 };
 
+template<class T>
+struct AssetParser;
+
+template <typename T, typename Enable = void>
+struct has_asset_parser : std::false_type {};
+
+template <typename T>
+struct has_asset_parser<
+    T, std::void_t<decltype(std::declval<AssetParser<T>>().operator()(std::declval<const Asset&>()))>>
+    : std::true_type {};
+
 class Asset final {
  public:
   using int_t = int64_t;
@@ -109,6 +120,9 @@ class Asset final {
 
   template<class T, std::enable_if_t<std::is_same<T, string_t>::value, bool> = true>
   const T& as() const;
+
+  template<class T, std::enable_if_t<has_asset_parser<T>::value, bool> = true>
+  T as() const;
 
   template<class T>
   bool is() const { return std::holds_alternative<T>(value); }
@@ -222,6 +236,11 @@ T Asset::as() const {
 template<class T, std::enable_if_t<std::is_same<T, Asset::string_t>::value, bool>>
 const T& Asset::as() const {
   return std::get<string_t>(value);
+}
+
+template<class T, std::enable_if_t<has_asset_parser<T>::value, bool>>
+T Asset::as() const {
+  return AssetParser<T>{}(*this);
 }
 
 template<class T, std::enable_if_t<std::is_integral<T>::value, bool>>

@@ -31,9 +31,17 @@ struct GLProgram : public ProgramHW {
   std::array<DescriptorSet, (size_t) ProgramData::DESCRIPTOR_SET_COUNT> descriptorSets;
 };
 
-struct GLVertexBuffer : public VertexBufferHW {
+struct GLVertexAttribute {
+  VertexAttribute base;
   GLuint bufferId = 0;
-  VertexArrayDesc vertexArray;
+};
+
+using GLVertexAttributesArray = std::array<GLVertexAttribute, VERTEX_ARRAY_MAX_SIZE>;
+
+struct GLVertexBuffer : public VertexBufferHW {
+  GLVertexAttributesArray attributes;
+  uint8_t attributesCount = 0;
+  uint32_t vertexCount = 0;
 };
 
 struct GLIndexBuffer : public IndexBufferHW {
@@ -122,8 +130,8 @@ class RendererBackendOpengl : public RendererBackend {
   void updateDescriptorSetTexture(DescriptorSetHandle dsh, uint8_t binding, TextureHandle th) override;
   void bindDescriptorSet(DescriptorSetHandle dsh, uint8_t set) override;
 
-  VertexBufferHandle createVertexBuffer(VertexArrayDesc) override;
-  void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) override;
+  VertexBufferHandle createVertexBuffer(std::initializer_list<VertexAttribute>, uint32_t vertexCount) override;
+  void assignVertexBufferData(VertexBufferHandle, uint8_t attributeIndex, BufferDataHandle) override;
   void destroyVertexBuffer(VertexBufferHandle) override;
 
   IndexBufferHandle createIndexBuffer(uint32_t byteSize) override;
@@ -142,7 +150,7 @@ class RendererBackendOpengl : public RendererBackend {
  private:
   using DescriptorSetBitset = std::bitset<ProgramData::DESCRIPTOR_SET_COUNT>;
 
-  void updateVertexArray(const VertexArrayDesc&);
+  void updateVertexAttributes(const GLVertexAttributesArray&, uint32_t count);
   void updateDescriptorSets(GLProgram*, const DescriptorSetBitset&);
 
  private:

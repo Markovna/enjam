@@ -212,19 +212,28 @@ void GLDescriptorTexture::bind(uint8_t binding) const {
   GL_CHECK_ERRORS();
 }
 
-VertexBufferHandle RendererBackendOpengl::createVertexBuffer(VertexArrayDesc vertexArrayDesc) {
+VertexBufferHandle RendererBackendOpengl::createVertexBuffer(std::initializer_list<VertexAttribute> attributes, uint32_t vertexCount) {
   auto vbh = handleAllocator.allocAndConstruct<GLVertexBuffer>();
   auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
 
-  vb->vertexArray = vertexArrayDesc;
+  auto it = vb->attributes.begin();
+  for(auto& attr : attributes) {
+    it->base = attr;
+    it->bufferId = 0;
+
+    it++;
+  }
+
+  vb->attributesCount = attributes.size();
+  vb->vertexCount = vertexCount;
   return vbh;
 }
 
-void RendererBackendOpengl::assignVertexBufferData(VertexBufferHandle vbh, BufferDataHandle bdh) {
+void RendererBackendOpengl::assignVertexBufferData(VertexBufferHandle vbh, uint8_t attributeIndex, BufferDataHandle bdh) {
   auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
   auto bd = handleAllocator.cast<GLBufferData*>(bdh);
   ENJAM_ASSERT(bd->target == GL_ARRAY_BUFFER);
-  vb->bufferId = bd->id;
+  vb->attributes[attributeIndex].bufferId = bd->id;
 }
 
 void RendererBackendOpengl::destroyVertexBuffer(VertexBufferHandle vbh) {
@@ -305,22 +314,23 @@ void RendererBackendOpengl::destroyBufferData(BufferDataHandle bdh) {
   handleAllocator.dealloc(bdh, bd);
 }
 
-void RendererBackendOpengl::updateVertexArray(const VertexArrayDesc& vertexArray) {
-  for(auto i = 0; i < vertexArray.attributes.size(); ++i) {
-    const VertexAttribute& attribute = vertexArray.attributes[i];
-    bool enabled = attribute.flags & VertexAttribute::FLAG_ENABLED;
+void RendererBackendOpengl::updateVertexAttributes(const GLVertexAttributesArray& attributes, uint32_t count) {
+  for(auto i = 0; i < attributes.size(); ++i) {
+    const GLVertexAttribute& attribute = attributes[i];
+    bool enabled = i < count;
     if(!enabled) {
       glDisableVertexAttribArray(i);
       GL_CHECK_ERRORS();
       continue;
     }
 
-    GLint size = OpenGL::toGLVertexAttribSize(attribute.type);
-    GLboolean normalized = OpenGL::toGLBoolean(attribute.flags & VertexAttribute::FLAG_NORMALIZED);
-    GLenum type = OpenGL::toGLVertexAttribType(attribute.type);
-    GLsizei stride = vertexArray.stride;
-    void* pointer = (void*) (uintptr_t) (attribute.offset);
+    GLint size = OpenGL::toGLVertexAttribSize(attribute.base.type);
+    GLboolean normalized = OpenGL::toGLBoolean(attribute.base.flags & VertexAttribute::FLAG_NORMALIZED);
+    GLenum type = OpenGL::toGLVertexAttribType(attribute.base.type);
+    GLsizei stride = attribute.base.stride;
+    void* pointer = (void*) (uintptr_t) (attribute.base.offset);
 
+    glBindBuffer(GL_ARRAY_BUFFER, attribute.bufferId);
     glVertexAttribPointer(i, size, type, normalized, stride, pointer);
     glEnableVertexAttribArray(i);
     GL_CHECK_ERRORS();
@@ -420,8 +430,7 @@ void RendererBackendOpengl::draw(ProgramHandle ph, VertexBufferHandle vbh, Index
 
   glBindVertexArray(defaultVertexArray);
 
-  glBindBuffer(GL_ARRAY_BUFFER, vb->bufferId);
-  updateVertexArray(vb->vertexArray);
+  updateVertexAttributes(vb->attributes, vb->attributesCount);
 
   if(indexCount == 0) {
     indexCount = ib->size;

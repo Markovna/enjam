@@ -15,29 +15,32 @@ void IndexBuffer::destroy(RendererBackend& backend) {
   backend.destroyIndexBuffer(handle);
 }
 
-VertexBuffer::VertexBuffer(RendererBackend& backend, VertexArrayDesc&& desc) {
-  handle = backend.createVertexBuffer(std::move(desc));
+VertexBuffer::VertexBuffer(RendererBackend& backend, std::initializer_list<VertexAttribute> attributes, uint32_t count) {
+  handle = backend.createVertexBuffer(attributes, count);
 }
 
-void VertexBuffer::setBuffer(RendererBackend& backend, BufferObject& buffer) {
-  if(bufferDataHandle && (flags & VertexBuffer::FLAG_DESTROY_BUFFER_OBJECT)) {
-    backend.destroyBufferData(bufferDataHandle);
+void VertexBuffer::setBuffer(RendererBackend& backend, uint32_t attributeIndex, BufferObject& bufferObj) {
+  auto& bufferHandle = bufferHandles[attributeIndex];
+  if(bufferHandle && bufferHandle.value()) {
+    backend.destroyBufferData(bufferHandle.value());
+    bufferHandle.reset();
   }
 
-  bufferDataHandle = buffer.getHandle();
-  backend.assignVertexBufferData(handle, bufferDataHandle);
-  flags &= ~VertexBuffer::FLAG_DESTROY_BUFFER_OBJECT;
+  backend.assignVertexBufferData(handle, attributeIndex, bufferObj.getHandle());
 }
 
-void VertexBuffer::setBuffer(RendererBackend& backend, BufferDataDesc&& desc, uint32_t offset) {
-  if(bufferDataHandle && (flags & VertexBuffer::FLAG_DESTROY_BUFFER_OBJECT)) {
-    backend.destroyBufferData(bufferDataHandle);
+void VertexBuffer::setBuffer(RendererBackend& backend, uint32_t attributeIndex, BufferDataDesc&& desc, uint32_t offset) {
+  auto& bufferHandle = bufferHandles[attributeIndex];
+  if(bufferHandle && bufferHandle.value()) {
+    backend.destroyBufferData(bufferHandle.value());
+    bufferHandle.reset();
   }
 
-  bufferDataHandle = backend.createBufferData(desc.size, BufferTargetBinding::VERTEX);
-  backend.updateBufferData(bufferDataHandle, std::move(desc), offset);
-  backend.assignVertexBufferData(handle, bufferDataHandle);
-  flags |= VertexBuffer::FLAG_DESTROY_BUFFER_OBJECT;
+  auto newBufferHandle = backend.createBufferData(desc.size, BufferTargetBinding::VERTEX);
+  backend.updateBufferData(newBufferHandle, std::move(desc), offset);
+  backend.assignVertexBufferData(handle, attributeIndex, newBufferHandle);
+
+  bufferHandle = newBufferHandle;
 }
 
 void VertexBuffer::destroy(RendererBackend& backend) {
@@ -45,8 +48,11 @@ void VertexBuffer::destroy(RendererBackend& backend) {
     backend.destroyVertexBuffer(handle);
   }
 
-  if(bufferDataHandle && (flags & VertexBuffer::FLAG_DESTROY_BUFFER_OBJECT)) {
-    backend.destroyBufferData(bufferDataHandle);
+  for(auto& bufferHandle : bufferHandles) {
+    if(bufferHandle && bufferHandle.value()) {
+      backend.destroyBufferData(bufferHandle.value());
+      bufferHandle.reset();
+    }
   }
 }
 

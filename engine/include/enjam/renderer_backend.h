@@ -82,20 +82,20 @@ using BufferDataHandle = Handle<BufferDataHW>;
 using TextureHandle = Handle<TextureHW>;
 
 struct VertexAttribute {
-  static constexpr uint32_t FLAG_ENABLED = 0x01;
-  static constexpr uint32_t FLAG_NORMALIZED = 0x02;
+  static constexpr uint32_t FLAG_NORMALIZED = 0x01;
 
   VertexAttributeType type = VertexAttributeType::FLOAT;
   uint32_t flags = 0;
-  uint32_t offset = 0;
+  uint32_t offset = 0; // in bytes
+  uint8_t stride = 0; // in bytes
 };
 
-struct VertexArrayDesc {
-  static constexpr uint32_t ARRAY_SIZE = 16;
+static constexpr uint32_t VERTEX_ARRAY_MAX_SIZE = 16;
 
-  std::array<VertexAttribute, ARRAY_SIZE> attributes {};
-  uint8_t stride = 0;
-};
+//struct VertexArrayDesc {
+//  std::array<VertexAttribute, VERTEX_ARRAY_MAX_SIZE> attributes {};
+//  uint8_t attributesCount = 0;
+//};
 
 struct BufferDataDesc {
   using Callback = std::function<void(void*, uint32_t)>;
@@ -153,8 +153,8 @@ class ENJAM_API RendererBackend {
   virtual void updateDescriptorSetTexture(DescriptorSetHandle dsh, uint8_t binding, TextureHandle th) = 0;
   virtual void bindDescriptorSet(DescriptorSetHandle dsh, uint8_t set) = 0;
 
-  virtual VertexBufferHandle createVertexBuffer(VertexArrayDesc) = 0;
-  virtual void assignVertexBufferData(VertexBufferHandle, BufferDataHandle) = 0;
+  virtual VertexBufferHandle createVertexBuffer(std::initializer_list<VertexAttribute>, uint32_t vertexCount) = 0;
+  virtual void assignVertexBufferData(VertexBufferHandle, uint8_t attributeIndex, BufferDataHandle) = 0;
   virtual void destroyVertexBuffer(VertexBufferHandle) = 0;
 
   virtual IndexBufferHandle createIndexBuffer(uint32_t byteSize) = 0;

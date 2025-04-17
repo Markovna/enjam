@@ -1,45 +1,53 @@
 #include "game.h"
 #include <enjam/application.h>
-#include <enjam/asset_manager.h>
-#include <enjam/simulation.h>
+#include <enjam/assets_manager.h>
+#include <enjam/assets_repository.h>
 #include <enjam/dependencies.h>
+#include <enjam/input.h>
 #include <enjam/log.h>
+#include <enjam/math.h>
 #include <enjam/scene.h>
+#include <enjam/simulation.h>
+#include <enjam/texture.h>
+#include <enjam/renderer.h>
 #include <enjam/render_primitive.h>
 #include <enjam/render_view.h>
-#include <enjam/renderer.h>
-#include <enjam/input.h>
-#include <enjam/math.h>
-#include <stb_image/stb_image.h>
-#include <fstream>
 #include <sstream>
+
+// TODO:
+// 1. Replace all the manual assets loading work with the Resource Managers
+// 2. Move Input handling to tick, check Input state instead of event handlers
+// 3. Smooth camera movement, utilizing delta time
+// 4. Camera rotation on <- ->
+// 5. Models loading instead of primitives
 
 class SandboxSimulation : public Enjam::Simulation {
  public:
   SandboxSimulation(Enjam::Renderer &renderer,
-                    Enjam::AssetManager& assetManager,
+                    Enjam::AssetsRepository& assetsRepository,
                     Enjam::Input &input,
-                    Enjam::RendererBackend &rendererBackend,
-                    Enjam::Camera &camera,
-                    Enjam::Scene &scene)
+                    Enjam::RendererBackend& rendererBackend,
+                    Enjam::Camera& camera,
+                    Enjam::Scene& scene)
       : renderer(renderer)
-      , assetManager(assetManager)
+      , assetsRepository(assetsRepository)
       , input(input)
       , rendererBackend(rendererBackend)
       , camera(camera)
       , scene(scene)
+      , textureAssets([&](auto& path) { return assetsRepository.load(path); })
       {}
 
   void start() override {
     static const float vertexData[] {
-        -1, -1,  1,  0,  0,
-         1, -1,  1,  1,  0,
-        -1,  1,  1,  0,  1,
-         1,  1,  1,  1,  1,
-        -1, -1, -1,  0,  0,
-         1, -1, -1,  1,  0,
-        -1,  1, -1,  0,  1,
-         1,  1, -1,  1,  1
+        -1, -1,  1,    0,  0,
+         1, -1,  1,    1,  0,
+        -1,  1,  1,    0,  1,
+         1,  1,  1,    1,  1,
+        -1, -1, -1,    0,  0,
+         1, -1, -1,    1,  0,
+        -1,  1, -1,    0,  1,
+         1,  1, -1,    1,  1
     };
 
     static const uint32_t indexData[] {
@@ -59,26 +67,17 @@ class SandboxSimulation : public Enjam::Simulation {
 
     vertexBuffer = new Enjam::VertexBuffer(
         rendererBackend,
-        Enjam::VertexArrayDesc{
-            .attributes = {
-                Enjam::VertexAttribute{
-                    .type = Enjam::VertexAttributeType::FLOAT3,
-                    .flags = Enjam::VertexAttribute::FLAG_ENABLED,
-                    .offset = 0
-                },
-                Enjam::VertexAttribute{
-                    .type = Enjam::VertexAttributeType::FLOAT2,
-                    .flags = Enjam::VertexAttribute::FLAG_ENABLED,
-                    .offset = 3 * sizeof(float)
-                }
-            },
-            .stride = 5 * sizeof(float)
-        });
+        {
+            Enjam::VertexAttribute { .type = Enjam::VertexAttributeType::FLOAT3, .offset = 0,                 .stride = 5 * sizeof(float) },
+            Enjam::VertexAttribute { .type = Enjam::VertexAttributeType::FLOAT2, .offset = 3 * sizeof(float), .stride = 5 * sizeof(float) }
+        },
+        8);
 
-    vertexBuffer->setBuffer(rendererBackend, Enjam::BufferDataDesc{(void *) vertexData, sizeof(vertexData)}, 0);
+    vertexBuffer->setBuffer(rendererBackend, 0, Enjam::BufferDataDesc{(void*) vertexData, sizeof(vertexData)});
+    vertexBuffer->setBuffer(rendererBackend, 1, Enjam::BufferDataDesc{(void*) vertexData, sizeof(vertexData)});
 
     indexBuffer = new Enjam::IndexBuffer(rendererBackend, 36);
-    indexBuffer->setBuffer(rendererBackend, Enjam::BufferDataDesc{(void *) indexData, sizeof(indexData)}, 0);
+    indexBuffer->setBuffer(rendererBackend, Enjam::BufferDataDesc{(void*) indexData, sizeof(indexData)});
 
     std::ifstream vertexShaderFile("shaders/vertex.glsl");
     std::stringstream vertexShaderStrBuffer;
@@ -95,6 +94,8 @@ class SandboxSimulation : public Enjam::Simulation {
         .setDescriptorSet(0, { { "perView",  Enjam::ProgramData::DescriptorType::UNIFORM },
                                { "perObject", Enjam::ProgramData::DescriptorType::UNIFORM }});
 
+    programHandle = rendererBackend.createProgram(programData);
+
     camera.projectionMatrix = Enjam::math::mat4f::perspective(60, 1.4, 0.1, 10);
     camera.position = Enjam:: math::vec3f { 0, 0, -8 };
     camera.front = Enjam::math::vec3f { 0, 0, 1 };
@@ -102,32 +103,14 @@ class SandboxSimulation : public Enjam::Simulation {
 
     input.onKeyPress().add(onKeyPress);
 
-    programHandle = rendererBackend.createProgram(programData);
-
     auto descriptorSetHandle = rendererBackend.createDescriptorSet(Enjam::DescriptorSetData {
         .bindings {
             { .binding = 0, .type = Enjam::DescriptorType::TEXTURE },
         }
     });
 
-    {
-      std::filesystem::path path = "assets/textures/dummy.nj_tex";
-      auto asset = assetManager.load(path);
-      if(!asset) {
-        ENJAM_ERROR("Couldn't load asset");
-      }
-      int width = (*asset)["width"].as<int>();
-      int height = (*asset)["height"].as<int>();
-      int channels = (*asset)["channels"].as<int>();
-      auto dataHash = (*asset)["data"].as<size_t>();
-      auto data = assetManager.loadBuffer(path, dataHash);
-      if(data.empty()) {
-        ENJAM_ERROR("Failed to load texture data!");
-      }
-      auto th = rendererBackend.createTexture(width, height, 1, Enjam::TextureFormat::RGB8);
-      rendererBackend.setTextureData(th, 0, 0, 0, 0, width, height, 0, data.data());
-      rendererBackend.updateDescriptorSetTexture(descriptorSetHandle, 0, th);
-    }
+    dummyTex = textureAssets.load("assets/textures/dummy.nj_tex", Enjam::TextureAssetFactory { .rendererBackend = rendererBackend } );
+    rendererBackend.updateDescriptorSetTexture(descriptorSetHandle, 0, dummyTex->getHandle());
 
     auto triangle1 = Enjam::RenderPrimitive { vertexBuffer, indexBuffer, programHandle };
     triangle1.setDescriptorSetHandle(descriptorSetHandle);
@@ -172,12 +155,15 @@ class SandboxSimulation : public Enjam::Simulation {
   }
 
  private:
-  Enjam::AssetManager& assetManager;
+  Enjam::AssetsRepository& assetsRepository;
   Enjam::Renderer& renderer;
   Enjam::Input& input;
   Enjam::RendererBackend& rendererBackend;
   Enjam::Camera& camera;
   Enjam::Scene& scene;
+  Enjam::AssetsManager<Enjam::Texture> textureAssets;
+
+  Enjam::AssetRef<Enjam::Texture> dummyTex;
 
   Enjam::VertexBuffer* vertexBuffer = nullptr;
   Enjam::IndexBuffer* indexBuffer = nullptr;
@@ -206,7 +192,7 @@ class SandboxSimulation : public Enjam::Simulation {
 
 void loadLib(Enjam::Injector& injector) {
 
-  injector.bind<njctr::IFactory<Enjam::Simulation()>>().to<njctr::Factory<SandboxSimulation(Enjam::Renderer&, Enjam::AssetManager&, Enjam::Input&, Enjam::RendererBackend&, Enjam::Camera&, Enjam::Scene&)>>();
+  injector.bind<njctr::IFactory<Enjam::Simulation()>>().to<njctr::Factory<SandboxSimulation(Enjam::Renderer&, Enjam::AssetsRepository&, Enjam::Input&, Enjam::RendererBackend&, Enjam::Camera&, Enjam::Scene&)>>();
 
   ENJAM_INFO("Game loaded!");
 };

@@ -1,4 +1,4 @@
-#include <enjam/asset_manager.h>
+#include <enjam/assets_repository.h>
 #include <enjam/application.h>
 #include <enjam/log.h>
 #include <enjam/assert.h>
@@ -71,10 +71,11 @@ int main(int argc, char* argv[]) {
   auto input = std::make_shared<Enjam::Input>();
   auto scene = std::make_shared<Enjam::Scene>();
   auto camera = std::make_shared<Enjam::Camera>();
-  auto assetManager = std::make_shared<Enjam::AssetManager>(exeFolder);
+  auto assetsLoader = std::make_shared<Enjam::AssetsFilesystemRep>(exeFolder);
+  auto assetsRepository = std::make_shared<Enjam::AssetsRepository>(*assetsLoader);
 
   auto setupDependencies = [&]() {
-    injector.bind<Enjam::AssetManager>().to(assetManager);
+    injector.bind<Enjam::AssetsRepository>().to(assetsRepository);
     injector.bind<Enjam::Renderer>().to(renderer);
     injector.bind<Enjam::Input>().to(input);
     injector.bind<Enjam::RendererBackend>().to(rendererBackend);

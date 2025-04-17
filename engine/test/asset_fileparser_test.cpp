@@ -3,6 +3,7 @@
 #include "enjam/asset.h"
 #include "enjam/assetfile_parser.h"
 #include "enjam/assetfile_serializer.h"
+#include "enjam/type_traits_helpers.h"
 
 int main() {
   using namespace Enjam;
@@ -45,6 +46,18 @@ int main() {
   assert(asset["array"][1].is<Asset::string_t>());
   assert(asset["array"][2].is<Asset::float_t>());
 
+  auto i = 0;
+  for(auto& desc : asset["array"]) {
+    if(i == 0) {
+      assert(desc.is<Asset::int_t>());
+    } else if (i == 1) {
+      assert(desc.is<Asset::string_t>());
+    } else if (i == 2) {
+      assert(desc.is<Asset::float_t>());
+    }
+    i++;
+  }
+
   assert(asset.at("property_name1"));
 
   Asset newAsset;
@@ -64,5 +77,11 @@ int main() {
 
   AssetFileSerializer()(newAsset, std::cout);
   std::cout << "\n";
-  AssetFileSerializer().setFlags(AssetFileSerializer::pretty | AssetFileSerializer::omitFirstEnclosure)(newAsset, std::cout);
+  AssetFileSerializer(AssetFileSerializer::pretty | AssetFileSerializer::omitFirstEnclosure)(newAsset, std::cout);
+
+  static_assert(std::is_same_v<AssetIterator<Asset>::reference, Asset&>);
+  static_assert(std::is_same_v<AssetIterator<const Asset>::reference, const Asset&>);
+  static_assert(std::is_same_v<AssetIterator<Asset>::pointer, Asset*>);
+  static_assert(std::is_same_v<AssetIterator<const Asset>::pointer, const Asset*>);
+
 }

@@ -197,7 +197,11 @@ class Vec3
 
   union {
     T v[SIZE];
-    struct { T x, y, z; };
+    Vec2<T> xy;
+    struct {
+      T x;
+      struct { T y, z; };
+    };
   };
 };
 
@@ -286,8 +290,27 @@ constexpr float epsilon<float>() noexcept { return 0.999f; }
 template<>
 constexpr double epsilon<double>() noexcept { return 0.9999; }
 
+template<class MATRIX, std::enable_if_t<MATRIX::NUM_ROWS == MATRIX::NUM_COLS, bool> = true>
+inline constexpr MATRIX transpose(MATRIX m) {
+  MATRIX result{};
+  for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
+    for (size_t row = 0; row < MATRIX::NUM_ROWS; ++row) {
+      result[col][row] = m[row][col];
+    }
+  }
+  return result;
+}
+
+template<template<class> class TMatrix, class T>
+class TMatSquareFunctions {
+ private:
+  friend inline constexpr TMatrix<T> transpose(TMatrix<T> m) {
+    return transpose(m);
+  }
+};
+
 template<typename T>
-class Mat33 {
+class Mat33 : public TMatSquareFunctions<Mat33, T> {
  public:
   typedef Vec3<T> col_type;
   typedef Vec3<T> row_type;
@@ -351,7 +374,7 @@ class Mat33 {
 };
 
 template<typename T>
-class Mat44 {
+class Mat44 : public TMatSquareFunctions<Mat44, T> {
  public:
   typedef Vec4<T> col_type;
   typedef Vec4<T> row_type;
@@ -461,10 +484,10 @@ class Mat44 {
 
 using vec2f = Vec2<float>;
 using vec3f = Vec3<float>;
-using vec4f = Vec3<float>;
+using vec4f = Vec4<float>;
 using vec2i = Vec2<int32_t>;
 using vec3i = Vec3<int32_t>;
-using vec4i = Vec3<int32_t>;
+using vec4i = Vec4<int32_t>;
 using mat3f = Mat33<float>;
 using mat4f = Mat44<float>;
 using quat = Quaternion<float>;

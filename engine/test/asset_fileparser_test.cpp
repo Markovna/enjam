@@ -2,7 +2,7 @@
 #include <iostream>
 #include "enjam/asset.h"
 #include "enjam/assetfile_parser.h"
-#include "enjam/assetfile_serializer.h"
+#include "enjam/assetfile_writer.h"
 #include "enjam/type_traits_helpers.h"
 
 int main() {

@@ -50,4 +50,8 @@ void Asset::pushBack(Asset&& asset) {
   array.push_back(std::move(asset));
 }
 
+bool Asset::isNumeric() const {
+  return is<int_t>() || is<float_t>();
+}
+
 }

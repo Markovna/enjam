@@ -19,6 +19,7 @@ Lexer::token_type Lexer::scan() {
     case ',': { input.get(); return token_type::value_separator; }
     case -1 : { input.get(); return token_type::end_of_input; }
     case '\"': { input.get(); return scanStr(true); }
+    case '#': { input.get(); return scanHash(); }
     default: break;
   }
 
@@ -63,6 +64,38 @@ void Lexer::skipWhitespace(std::istream &input) {
     }
     input.get();
   }
+}
+
+Lexer::token_type Lexer::scanHash() {
+  if(input.eof()) { return token_type::parse_error; }
+
+  while(!input.eof()) {
+    auto next = input.peek();
+    switch(next) {
+      case 'A': case 'a':
+      case 'B': case 'b':
+      case 'C': case 'c':
+      case 'D': case 'd':
+      case 'E': case 'e':
+      case 'F': case 'f': {
+        buffer.push_back(input.get());
+        continue;
+      }
+      default: {
+        if (!std::isdigit(next)) { break; }
+        buffer.push_back(input.get());
+        continue;
+      }
+    }
+    break;
+  }
+
+  if(buffer.empty()) {
+    return token_type::parse_error;
+  }
+
+  numValue = (int64_t) std::stoul(buffer, nullptr, 16);
+  return token_type::hash_value;
 }
 
 Lexer::token_type Lexer::scanNum() {
@@ -172,6 +205,11 @@ bool AssetFileParser::parseProperty(Asset& value) {
         value = std::string { lexer.getStr() };
         return true;
       }
+      case token_type::hash_value: {
+        auto hash = lexer.getInt();
+        value = bufferParser(hash);
+        return true;
+      }
       case token_type::name_separator:
       case token_type::value_separator:
       case token_type::end_array:
@@ -199,9 +237,8 @@ AssetFileParser::token_type AssetFileParser::parseArray(Asset& asset) {
   }
 }
 
-AssetFileParser::AssetFileParser(std::istream& input) : lexer(input) {
-
-}
+AssetFileParser::AssetFileParser(std::istream& input, const BufferParser& bufferParser)
+  : lexer(input), bufferParser(bufferParser) { }
 
 Asset AssetFileParser::parse() {
   Asset asset;

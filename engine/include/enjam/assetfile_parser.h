@@ -4,6 +4,7 @@
 #include <string>
 #include <istream>
 #include <cmath>
+#include <enjam/asset.h>
 
 namespace Enjam {
 
@@ -20,6 +21,7 @@ class Lexer {
     float_value,
     int_value,
     string_value,
+    hash_value,
     name_separator,
     value_separator,
     end_of_input,
@@ -42,6 +44,7 @@ class Lexer {
   static void skipWhitespace(std::istream& input);
 
   token_type scanStr(bool quoted);
+  token_type scanHash();
   token_type scanNum();
   void clear();
 
@@ -53,12 +56,16 @@ class Lexer {
   std::string buffer;
 };
 
+// TODO: template parameter Input which can provide data either from the asset file or from an associated buffer by a given hash value
+// TODO: rename to AssetFileReader
+
 class AssetFileParser {
  private:
   using token_type = Lexer::token_type;
+  using BufferParser = std::function<Asset::buffer_t(uint64_t)>;
 
  public:
-  explicit AssetFileParser(std::istream& input);
+  AssetFileParser(std::istream& input, const BufferParser&);
 
   Asset parse();
   bool parse(Asset&);
@@ -73,6 +80,7 @@ class AssetFileParser {
 
  private:
   Lexer lexer;
+  BufferParser bufferParser;
 };
 
 }

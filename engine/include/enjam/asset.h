@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <variant>
+#include <enjam/asset_buffer.h>
 #include <enjam/type_traits_helpers.h>
 
 namespace Enjam {
@@ -99,7 +100,7 @@ struct has_asset_parser : std::false_type {};
 
 template <typename T>
 struct has_asset_parser<
-    T, std::void_t<decltype(std::declval<AssetParser<T>>().operator()(std::declval<const Asset&>()))>>
+    T, std::void_t<decltype(AssetParser<T>::fromAsset(std::declval<const Asset&>(), std::declval<T&>()))>>
     : std::true_type {};
 
 class Asset final {
@@ -109,9 +110,47 @@ class Asset final {
   using string_t = std::string;
   using object_t = std::vector<Property>;
   using array_t = std::vector<Asset>;
-  using value_t = std::variant<int_t, float_t, string_t, object_t, array_t>;
+  using buffer_t = std::function<AssetBuffer()>;
+  using value_t = std::variant<int_t, float_t, string_t, object_t, array_t, buffer_t>;
 
  public:
+  Asset() = default;
+  Asset(const Asset&) = default;
+  Asset(Asset&&) = default;
+
+  template<class T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
+  Asset(T val) : value((int_t) val) { }
+
+  template<class T, std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
+  Asset(T val) : value((float_t) val) { }
+
+  template<class T, std::enable_if_t<std::is_constructible<string_t, T>::value, bool> = true>
+  Asset(T&& val) : value(std::forward<T>(val)) { }
+
+  template<class T, std::enable_if_t<std::is_invocable_r<AssetBuffer, T>::value, bool> = true>
+  Asset(T val) : value(val) { }
+
+  template<class T, std::enable_if_t<std::is_assignable<AssetBuffer, T>::value, bool> = true>
+  Asset(T&& val) : value([buf = std::forward<T>(val)] { return buf; }) { }
+
+  template<class T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
+  Asset& operator=(T);
+
+  template<class T, std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
+  Asset& operator=(T);
+
+  template<class T, std::enable_if_t<std::is_constructible<string_t, T>::value, bool> = true>
+  Asset& operator=(T&&);
+
+  template<class T, std::enable_if_t<std::is_invocable<T>::value, bool> = true>
+  Asset& operator=(T&&);
+
+  Asset& operator=(const Asset&) = default;
+  Asset& operator=(Asset&&) noexcept = default;
+
+  Asset& operator[](const std::string_view&);
+  Asset& operator[](size_t);
+
   template<class T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
   T as() const;
 
@@ -127,35 +166,19 @@ class Asset final {
   template<class T>
   bool is() const { return std::holds_alternative<T>(value); }
 
+  bool isNumeric() const;
+
   template<class TVisitor>
   decltype(auto) visit(TVisitor&& visitor) const {
     return std::visit(std::forward<TVisitor>(visitor), value);
   }
-
-  Asset() = default;
-  Asset(const Asset&) = default;
-  Asset(Asset&&) = default;
-
-  template<class T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
-  Asset& operator=(T);
-
-  template<class T, std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
-  Asset& operator=(T);
-
-  template<class T, std::enable_if_t<std::is_constructible<string_t, T>::value, bool> = true>
-  Asset& operator=(T&&);
-
-  Asset& operator=(const Asset&) = default;
-  Asset& operator=(Asset&&) noexcept = default;
-
-  Asset& operator[](const std::string_view&);
-  Asset& operator[](size_t);
 
   const Asset* at(const std::string&) const;
 
   void pushBack(const Asset&);
   void pushBack(Asset&&);
 
+  AssetBuffer load() const { return std::get<buffer_t>(value)(); }
   void clear() { value = {}; }
 
   AssetIterator<const Asset> begin() const {
@@ -171,7 +194,7 @@ class Asset final {
     return std::visit(overloaded {
         [](object_t& obj) -> Iterator { return { obj.begin() }; },
         [](array_t& obj) -> Iterator { return { obj.begin() }; },
-        [](auto&) -> Iterator { throw std::invalid_argument("Can not get iterator of simple type"); }
+        [](auto&) -> Iterator { throw std::invalid_argument("Can not get iterator of not iteratable type"); }
     }, value);
   }
 
@@ -180,7 +203,7 @@ class Asset final {
     return std::visit(overloaded {
         [](object_t& obj) -> Iterator { return { obj.end() }; },
         [](array_t& obj) -> Iterator { return { obj.end() }; },
-        [](auto&) -> Iterator { throw std::invalid_argument("Can not get iterator of simple type"); }
+        [](auto&) -> Iterator { throw std::invalid_argument("Can not get iterator of not iteratable type"); }
     }, value);
   }
 
@@ -189,7 +212,7 @@ class Asset final {
     return std::visit(overloaded {
         [](object_t& obj) -> Iterator { return { obj.begin() }; },
         [](array_t& obj) -> Iterator { return { obj.begin() }; },
-        [](auto&) -> Iterator { throw std::invalid_argument("Can not get iterator of simple type"); }
+        [](auto&) -> Iterator { throw std::invalid_argument("Can not get iterator of not iteratable type"); }
     }, value);
   }
 
@@ -198,7 +221,7 @@ class Asset final {
     return std::visit(overloaded {
         [](object_t& obj) -> Iterator { return { obj.end() }; },
         [](array_t& obj) -> Iterator { return { obj.end() }; },
-        [](auto&) -> Iterator { throw std::invalid_argument("Can not get iterator of simple type"); }
+        [](auto&) -> Iterator { throw std::invalid_argument("Can not get iterator of not iteratable type"); }
     }, value);
   }
 
@@ -240,7 +263,9 @@ const T& Asset::as() const {
 
 template<class T, std::enable_if_t<has_asset_parser<T>::value, bool>>
 T Asset::as() const {
-  return AssetParser<T>{}(*this);
+  T val;
+  AssetParser<T>::fromAsset(*this, val);
+  return val;
 }
 
 template<class T, std::enable_if_t<std::is_integral<T>::value, bool>>
@@ -258,6 +283,12 @@ Asset& Asset::operator=(T arg) {
 template<class T, std::enable_if_t<std::is_constructible<Asset::string_t, T>::value, bool>>
 Asset& Asset::operator=(T&& arg) {
   value = std::forward<T>(arg);
+  return *this;
+}
+
+template<class T, std::enable_if_t<std::is_invocable<T>::value, bool>>
+Asset& Asset::operator=(T&& func) {
+  value = func;
   return *this;
 }
 

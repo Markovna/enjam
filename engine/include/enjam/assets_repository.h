@@ -2,11 +2,11 @@
 #define INCLUDE_ENJAM_ASSET_MANAGER_H_
 
 #include <filesystem>
+#include <fstream>
+#include <memory>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <unordered_map>
-#include <memory>
-#include <fstream>
 #include <enjam/asset.h>
 #include <enjam/utils.h>
 #include <enjam/renderer_backend.h>
@@ -24,26 +24,18 @@ class AssetsLoader {
  public:
   using Path = std::filesystem::path;
 
-  virtual AssetRoot load(const Path& path) = 0;
-};
-
-struct AssetRoot {
-  using Buffer = std::vector<char>;
-  using BufferLoader = std::function<Buffer(size_t)>;
-
-  Asset asset;
-  AssetsLoader::Path path;
-  BufferLoader bufferLoader;
+  virtual Asset load(const Path& path) = 0;
 };
 
 class AssetsFilesystemRep : public AssetsLoader {
  public:
   explicit AssetsFilesystemRep(Path path = {}) : rootPath(std::move(path)) { }
 
-  AssetRoot load(const Path& path) override;
-
+  Asset load(const Path& path) override;
   void save(const Path& path, const Asset& asset);
-  size_t saveBuffer(const Path& path, const char*, size_t);
+
+ private:
+  static AssetBuffer loadBuffer(const AssetsLoader::Path&);
 
  private:
   Path rootPath;
@@ -56,18 +48,15 @@ class AssetsBinaryArchiveRep : public AssetsLoader {
 class AssetsRepository {
  public:
   using Path = AssetsLoader::Path;
-  using Ref = std::shared_ptr<AssetRoot>;
+  using Ref = std::shared_ptr<Asset>;
 
   explicit AssetsRepository(AssetsLoader& loader)
-    : loader(loader)
-    , assetsByPath() {
-
-  }
+    : loader(loader), assetsByPath() { }
 
   Ref load(const Path& path);
 
  private:
-  std::unordered_map<std::string, std::weak_ptr<AssetRoot>> assetsByPath;
+  std::unordered_map<std::string, std::weak_ptr<Asset>> assetsByPath;
   AssetsLoader& loader;
 };
 

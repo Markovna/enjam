@@ -1,7 +1,6 @@
 #include <enjam/renderer.h>
 #include <enjam/renderer_backend.h>
 #include <enjam/assert.h>
-#include <enjam/math.h>
 #include <enjam/render_view.h>
 #include <enjam/scene.h>
 

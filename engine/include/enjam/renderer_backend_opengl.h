@@ -10,7 +10,7 @@
 
 namespace Enjam {
 
-typedef void* (*GLLoaderProc)(const char *name);
+typedef void* (* GLLoaderProc)(const char* name);
 
 struct GLSwapChain {
   using MakeCurrentFunc = std::function<void()>;
@@ -41,7 +41,7 @@ using GLVertexAttributesArray = std::array<GLVertexAttribute, VERTEX_ARRAY_MAX_S
 struct GLVertexBuffer : public VertexBufferHW {
   GLVertexAttributesArray attributes;
   uint8_t attributesCount = 0;
-  uint32_t vertexCount = 0;
+  uint64_t vertexCount = 0;
 };
 
 struct GLIndexBuffer : public IndexBufferHW {
@@ -81,22 +81,22 @@ struct GLDescriptorNone {};
 using GLDescriptor = std::variant<GLDescriptorNone, GLDescriptorBuffer, GLDescriptorTexture>;
 
 struct GLDescriptorSet : public DescriptorSetHW {
-  explicit GLDescriptorSet(DescriptorSetData &&data) noexcept {
-    std::sort(data.bindings.begin(), data.bindings.end(), [](auto &&lhs, auto &&rhs) {
+  explicit GLDescriptorSet(DescriptorSetData&& data) noexcept {
+    std::sort(data.bindings.begin(), data.bindings.end(), [](auto&& lhs, auto&& rhs) {
       return lhs.binding < rhs.binding;
     });
 
     size_t descriptorsCount = data.bindings.back().binding + 1;
-    descriptors.resize(descriptorsCount, GLDescriptorNone{});
+    descriptors.resize(descriptorsCount, GLDescriptorNone {});
 
-    for (auto &desc: data.bindings) {
+    for (auto& desc: data.bindings) {
       switch (desc.type) {
         case DescriptorType::UNIFORM_BUFFER: {
-          descriptors[desc.binding] = GLDescriptorBuffer{};
+          descriptors[desc.binding] = GLDescriptorBuffer {};
           break;
         }
         case DescriptorType::TEXTURE: {
-          descriptors[desc.binding] = GLDescriptorTexture{};
+          descriptors[desc.binding] = GLDescriptorTexture {};
           break;
         }
       }
@@ -126,11 +126,15 @@ class RendererBackendOpengl : public RendererBackend {
 
   DescriptorSetHandle createDescriptorSet(DescriptorSetData&&) override;
   void destroyDescriptorSet(DescriptorSetHandle) override;
-  void updateDescriptorSetBuffer(DescriptorSetHandle dsh, uint8_t binding, BufferDataHandle bdh, uint32_t size, uint32_t offset) override;
+  void updateDescriptorSetBuffer(DescriptorSetHandle dsh,
+                                 uint8_t binding,
+                                 BufferDataHandle bdh,
+                                 uint32_t size,
+                                 uint32_t offset) override;
   void updateDescriptorSetTexture(DescriptorSetHandle dsh, uint8_t binding, TextureHandle th) override;
   void bindDescriptorSet(DescriptorSetHandle dsh, uint8_t set) override;
 
-  VertexBufferHandle createVertexBuffer(std::initializer_list<VertexAttribute>, uint32_t vertexCount) override;
+  VertexBufferHandle createVertexBuffer(std::initializer_list<VertexAttribute>, uint64_t vertexCount) override;
   void assignVertexBufferData(VertexBufferHandle, uint8_t attributeIndex, BufferDataHandle) override;
   void destroyVertexBuffer(VertexBufferHandle) override;
 

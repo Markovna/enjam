@@ -23,7 +23,7 @@ class BufferObject;
 class VertexBuffer {
  public:
 
-  VertexBuffer(RendererBackend&, std::initializer_list<VertexAttribute>, uint32_t count);
+  VertexBuffer(RendererBackend&, std::initializer_list<VertexAttribute>, uint64_t count);
   void setBuffer(RendererBackend&, uint32_t attributeIndex, BufferDataDesc&&, uint32_t offset = 0);
   void setBuffer(RendererBackend&, uint32_t attributeIndex, BufferObject&);
   void destroy(RendererBackend&);
@@ -54,9 +54,10 @@ class BufferObject {
 
 class RenderPrimitive {
  public:
-  RenderPrimitive(VertexBuffer* vertexBuffer = nullptr, IndexBuffer* indexBuffer = nullptr, ProgramHandle programHandle = { })
-    : vertexBuffer(vertexBuffer), indexBuffer(indexBuffer), programHandle(programHandle), transform(1)
-  { }
+  RenderPrimitive(VertexBuffer* vertexBuffer = nullptr,
+                  IndexBuffer* indexBuffer = nullptr,
+                  ProgramHandle programHandle = {})
+      : vertexBuffer(vertexBuffer), indexBuffer(indexBuffer), programHandle(programHandle), transform(1) {}
 
   VertexBuffer* getVertexBuffer() { return vertexBuffer; }
   IndexBuffer* getIndexBuffer() { return indexBuffer; }

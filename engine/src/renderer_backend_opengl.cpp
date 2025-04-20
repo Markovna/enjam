@@ -212,7 +212,7 @@ void GLDescriptorTexture::bind(uint8_t binding) const {
   GL_CHECK_ERRORS();
 }
 
-VertexBufferHandle RendererBackendOpengl::createVertexBuffer(std::initializer_list<VertexAttribute> attributes, uint32_t vertexCount) {
+VertexBufferHandle RendererBackendOpengl::createVertexBuffer(std::initializer_list<VertexAttribute> attributes, uint64_t vertexCount) {
   auto vbh = handleAllocator.allocAndConstruct<GLVertexBuffer>();
   auto vb = handleAllocator.cast<GLVertexBuffer*>(vbh);
 

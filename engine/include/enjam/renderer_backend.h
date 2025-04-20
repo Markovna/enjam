@@ -98,26 +98,23 @@ static constexpr uint32_t VERTEX_ARRAY_MAX_SIZE = 16;
 //};
 
 struct BufferDataDesc {
-  using Callback = std::function<void(void*, uint32_t)>;
+  using Callback = std::function<void(void*, uint64_t)>;
 
   void* data = nullptr;
-  uint32_t size = 0;
+  uint64_t size = 0;
   Callback onConsumed = nullptr;
 
   BufferDataDesc(const BufferDataDesc& other) = delete;
-  BufferDataDesc& operator =(const BufferDataDesc& rhs) = delete;
+  BufferDataDesc& operator=(const BufferDataDesc& rhs) = delete;
 
   BufferDataDesc(BufferDataDesc&& other) noexcept
-    : data(other.data)
-    , size(other.size)
-    , onConsumed(std::move(other.onConsumed)) {
+      : data(other.data), size(other.size), onConsumed(std::move(other.onConsumed)) {
     other.data = nullptr;
     other.size = 0;
   }
 
-  BufferDataDesc(void* data, uint32_t size, Callback onConsumed = nullptr)
-    : data(data), size(size), onConsumed(std::move(onConsumed))
-  {}
+  BufferDataDesc(void* data, uint64_t size, Callback onConsumed = nullptr)
+      : data(data), size(size), onConsumed(std::move(onConsumed)) {}
 
   BufferDataDesc& operator=(BufferDataDesc&& rhs) noexcept {
     if (this != &rhs) {
@@ -142,18 +139,26 @@ class ENJAM_API RendererBackend {
   virtual void beginFrame() = 0;
   virtual void endFrame() = 0;
 
-  virtual void draw(ProgramHandle, VertexBufferHandle, IndexBufferHandle, uint32_t indexCount = 0, uint32_t indexOffset = 0) = 0;
+  virtual void draw(ProgramHandle,
+                    VertexBufferHandle,
+                    IndexBufferHandle,
+                    uint32_t indexCount = 0,
+                    uint32_t indexOffset = 0) = 0;
 
   virtual ProgramHandle createProgram(ProgramData&) = 0;
   virtual void destroyProgram(ProgramHandle) = 0;
 
   virtual DescriptorSetHandle createDescriptorSet(DescriptorSetData&&) = 0;
   virtual void destroyDescriptorSet(DescriptorSetHandle) = 0;
-  virtual void updateDescriptorSetBuffer(DescriptorSetHandle dsh, uint8_t binding, BufferDataHandle bdh, uint32_t size, uint32_t offset) = 0;
+  virtual void updateDescriptorSetBuffer(DescriptorSetHandle dsh,
+                                         uint8_t binding,
+                                         BufferDataHandle bdh,
+                                         uint32_t size,
+                                         uint32_t offset) = 0;
   virtual void updateDescriptorSetTexture(DescriptorSetHandle dsh, uint8_t binding, TextureHandle th) = 0;
   virtual void bindDescriptorSet(DescriptorSetHandle dsh, uint8_t set) = 0;
 
-  virtual VertexBufferHandle createVertexBuffer(std::initializer_list<VertexAttribute>, uint32_t vertexCount) = 0;
+  virtual VertexBufferHandle createVertexBuffer(std::initializer_list<VertexAttribute>, uint64_t vertexCount) = 0;
   virtual void assignVertexBufferData(VertexBufferHandle, uint8_t attributeIndex, BufferDataHandle) = 0;
   virtual void destroyVertexBuffer(VertexBufferHandle) = 0;
 

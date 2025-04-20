@@ -1,9 +1,15 @@
+set(CMAKE_DEBUG_POSTFIX "")
+
 set(SHADERS
         shaders/vertex.glsl
         shaders/fragment.glsl)
 
 set(TEXTURES
         textures/dummy.png
+        )
+
+set(MODELS
+        models/cube.obj
         )
 
 set(ASSETS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets)
@@ -17,19 +23,34 @@ add_custom_target(copy_assets
         )
 
 set(ASSETS)
-foreach (tex ${TEXTURES})
-    get_filename_component(localname "${tex}" NAME_WE)
-    get_filename_component(fullname "${tex}" ABSOLUTE)
+foreach(resource ${TEXTURES})
+    get_filename_component(local_name "${resource}" NAME_WE)
+    get_filename_component(input_path "${resource}" ABSOLUTE)
 
-    set(output_path "${ASSETS_DIR}/textures/${localname}.nj_tex")
-    #get_filename_component(full_output ${output_path} ABSOLUTE)
+    set(output_path "${ASSETS_DIR}/textures/${local_name}.nj_tex")
 
     add_custom_command(
         OUTPUT ${output_path}
-        COMMAND njtex -o ${output_path} ${fullname}
-        MAIN_DEPENDENCY ${tex}
+        COMMAND njtex -o ${output_path} ${input_path}
+        MAIN_DEPENDENCY ${resource}
         DEPENDS njtex
-        COMMENT "Generating asset file ${tex} to ${output_path}"
+        COMMENT "Generating asset file ${resource} to ${output_path}"
+    )
+    list(APPEND ASSETS ${output_path})
+endforeach()
+
+foreach(resource ${MODELS})
+    get_filename_component(local_name "${resource}" NAME_WE)
+    get_filename_component(input_path "${resource}" ABSOLUTE)
+
+    set(output_path "${ASSETS_DIR}/models/${local_name}.nj_dcc")
+
+    add_custom_command(
+            OUTPUT ${output_path}
+            COMMAND dcc_importer -o ${output_path} ${input_path}
+            MAIN_DEPENDENCY ${resource}
+            DEPENDS dcc_importer
+            COMMENT "Generating asset file ${resource} to ${output_path}"
     )
     list(APPEND ASSETS ${output_path})
 endforeach()
@@ -44,11 +65,11 @@ endforeach()
 file(COPY ${ASSETS_DIR} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 
 # Sandbox executable
-add_executable(sandbox src/main.cpp ${ASSETS} ${SHADER_BINS})
-add_dependencies(sandbox copy_assets)
+add_executable(sandbox src/main.cpp)
 set_property(TARGET sandbox PROPERTY ENABLE_EXPORTS ON)
 target_link_libraries(sandbox enjam)
 
 # Sandbox shared lib
-add_library(game SHARED src/game.cpp)
+add_library(game SHARED src/game.cpp ${ASSETS} ${SHADER_BINS})
+add_dependencies(game copy_assets)
 target_link_libraries(game enjam)

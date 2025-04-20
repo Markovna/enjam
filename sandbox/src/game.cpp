@@ -3,6 +3,7 @@
 #include <enjam/assets_manager.h>
 #include <enjam/assets_repository.h>
 #include <enjam/dependencies.h>
+#include <enjam/dcc_asset.h>
 #include <enjam/input.h>
 #include <enjam/log.h>
 #include <enjam/math.h>
@@ -36,48 +37,10 @@ class SandboxSimulation : public Enjam::Simulation {
       , camera(camera)
       , scene(scene)
       , textureAssets([&](auto& path) { return assetsRepository.load(path); })
+      , dccAssets([&](auto& path) { return assetsRepository.load(path); })
       {}
 
   void start() override {
-    static const float vertexData[] {
-        -1, -1,  1,    0,  0,
-         1, -1,  1,    1,  0,
-        -1,  1,  1,    0,  1,
-         1,  1,  1,    1,  1,
-        -1, -1, -1,    0,  0,
-         1, -1, -1,    1,  0,
-        -1,  1, -1,    0,  1,
-         1,  1, -1,    1,  1
-    };
-
-    static const uint32_t indexData[] {
-        2, 6, 7,
-        2, 3, 7,
-        0, 4, 5,
-        0, 1, 5,
-        0, 2, 6,
-        0, 4, 6,
-        1, 3, 7,
-        1, 5, 7,
-        0, 2, 3,
-        0, 1, 3,
-        4, 6, 7,
-        4, 5, 7
-    };
-
-    vertexBuffer = new Enjam::VertexBuffer(
-        rendererBackend,
-        {
-            Enjam::VertexAttribute { .type = Enjam::VertexAttributeType::FLOAT3, .offset = 0,                 .stride = 5 * sizeof(float) },
-            Enjam::VertexAttribute { .type = Enjam::VertexAttributeType::FLOAT2, .offset = 3 * sizeof(float), .stride = 5 * sizeof(float) }
-        },
-        8);
-
-    vertexBuffer->setBuffer(rendererBackend, 0, Enjam::BufferDataDesc{(void*) vertexData, sizeof(vertexData)});
-    vertexBuffer->setBuffer(rendererBackend, 1, Enjam::BufferDataDesc{(void*) vertexData, sizeof(vertexData)});
-
-    indexBuffer = new Enjam::IndexBuffer(rendererBackend, 36);
-    indexBuffer->setBuffer(rendererBackend, Enjam::BufferDataDesc{(void*) indexData, sizeof(indexData)});
 
     std::ifstream vertexShaderFile("shaders/vertex.glsl");
     std::stringstream vertexShaderStrBuffer;
@@ -112,11 +75,27 @@ class SandboxSimulation : public Enjam::Simulation {
     dummyTex = textureAssets.load("assets/textures/dummy.nj_tex", Enjam::TextureAssetFactory { .rendererBackend = rendererBackend } );
     rendererBackend.updateDescriptorSetTexture(descriptorSetHandle, 0, dummyTex->getHandle());
 
-    auto triangle1 = Enjam::RenderPrimitive { vertexBuffer, indexBuffer, programHandle };
+    cubeAsset = dccAssets.load("assets/models/cube.nj_dcc", Enjam::DCCAssetFactory { });
+    vertexBuffer.reset(
+        new Enjam::VertexBuffer {
+          rendererBackend,
+          {
+            Enjam::VertexAttribute { .type = Enjam::VertexAttributeType::FLOAT3, .offset = 0, .stride = sizeof(Enjam::math::vec3f) },
+            Enjam::VertexAttribute { .type = Enjam::VertexAttributeType::FLOAT2, .offset = 0, .stride = sizeof(Enjam::math::vec2f) }
+          },
+          cubeAsset->getPositions().size()
+        });
+    vertexBuffer->setBuffer(rendererBackend, 0, Enjam::BufferDataDesc{(void*) cubeAsset->getPositions().data(), cubeAsset->getPositions().size() * sizeof(Enjam::math::vec3f)});
+    vertexBuffer->setBuffer(rendererBackend, 1, Enjam::BufferDataDesc{(void*) cubeAsset->getTexCoords0().data(), cubeAsset->getTexCoords0().size() * sizeof(Enjam::math::vec2f)});
+
+    indexBuffer.reset(new Enjam::IndexBuffer(rendererBackend, cubeAsset->getIndices().size()));
+    indexBuffer->setBuffer(rendererBackend, Enjam::BufferDataDesc{(void*) cubeAsset->getIndices().data(), cubeAsset->getIndices().size() * sizeof(uint32_t)});
+
+    auto triangle1 = Enjam::RenderPrimitive { vertexBuffer.get(), indexBuffer.get(), programHandle };
     triangle1.setDescriptorSetHandle(descriptorSetHandle);
     scene.getPrimitives().push_back(triangle1);
 
-    auto triangle2 = Enjam::RenderPrimitive { vertexBuffer, indexBuffer, programHandle };
+    auto triangle2 = Enjam::RenderPrimitive { vertexBuffer.get(), indexBuffer.get(), programHandle };
     triangle2.setDescriptorSetHandle(descriptorSetHandle);
     triangle2.setTransform(Enjam::math::mat4f::translation(Enjam::math::vec3f {4, 0, 0}));
     scene.getPrimitives().push_back(triangle2);
@@ -130,14 +109,10 @@ class SandboxSimulation : public Enjam::Simulation {
 
     if(vertexBuffer) {
       vertexBuffer->destroy(rendererBackend);
-      delete vertexBuffer;
-      vertexBuffer = nullptr;
     }
 
     if(indexBuffer) {
       indexBuffer->destroy(rendererBackend);
-      delete indexBuffer;
-      indexBuffer = nullptr;
     }
 
     if(programHandle) {
@@ -162,11 +137,13 @@ class SandboxSimulation : public Enjam::Simulation {
   Enjam::Camera& camera;
   Enjam::Scene& scene;
   Enjam::AssetsManager<Enjam::Texture> textureAssets;
+  Enjam::AssetsManager<Enjam::DCCAsset> dccAssets;
 
   Enjam::AssetRef<Enjam::Texture> dummyTex;
+  Enjam::AssetRef<Enjam::DCCAsset> cubeAsset;
 
-  Enjam::VertexBuffer* vertexBuffer = nullptr;
-  Enjam::IndexBuffer* indexBuffer = nullptr;
+  std::unique_ptr<Enjam::VertexBuffer> vertexBuffer;
+  std::unique_ptr<Enjam::IndexBuffer> indexBuffer;
   Enjam::ProgramHandle programHandle = { };
 
   Enjam::KeyPressEvent::EventHandler onKeyPress = Enjam::KeyPressEvent::EventHandler {

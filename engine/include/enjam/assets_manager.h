@@ -15,7 +15,7 @@
  * https://en.cppreference.com/w/cpp/memory/shared_ptr/shared_ptr
  *
  *   struct Holder {
- *     std::vector<ResourceRef<Texture>> textureRefs;
+ *     std::vector<AssetRef<Texture>> textureRefs;
  *     Material material;
  *   };
  *
@@ -30,7 +30,7 @@
 //
 // 1. Write tests for Assets Manager
 //
-// 2. Implement our own smart pointer for Resource instead of shared_ptr. Should be able to
+// 2. Implement our own smart pointer for Asset instead of shared_ptr. Should be able to
 //    hold other dependencies as references. Also will give more control on how resources
 //    are aligned in memory.
 
@@ -40,52 +40,48 @@ class Asset;
 class AssetsRepository;
 
 template<class TAsset>
-using AssetRef = std::shared_ptr<const TAsset>;
+using AssetRef = std::shared_ptr<TAsset>;
 
 template<class TAsset>
 class AssetsCache {
  public:
-  AssetRef<TAsset> find(const std::filesystem::path& path) {
+  AssetRef<TAsset> find(const std::filesystem::path& path) const {
     AssetRef<TAsset> ref;
 
     auto it = cacheByPath.find(path);
-    if(it != cacheByPath.end()) {
+    if (it != cacheByPath.end()) {
       ref = it->second.lock();
     }
 
     return ref;
   }
 
-  std::weak_ptr<const TAsset>& operator[](const std::filesystem::path& path) {
+  std::weak_ptr<TAsset>& operator[](const std::filesystem::path& path) {
     return cacheByPath[path];
   }
 
  private:
-  std::unordered_map<std::string, std::weak_ptr<const TAsset>> cacheByPath;
+  std::unordered_map<std::string, std::weak_ptr<TAsset>> cacheByPath;
 };
-
-template<class T>
-class AssetBuilder;
 
 template<class TAsset>
 class AssetsManager {
  public:
   using AssetRef = AssetRef<TAsset>;
-  using Path = std::filesystem::path;
+  using Path = AssetsRepository::Path;
   using AssetRepository = std::function<AssetsRepository::Ref(const Path&)>;
 
-  explicit AssetsManager(AssetRepository assetRepository)
-    : cache(), assetRepository(std::move(assetRepository))
-  { }
+  using AssetFactory = std::function<AssetRef(const Asset&)>;
 
-  template<class ...Args>
-  AssetRef load(const Path& path, Args&&... args) {
+  explicit AssetsManager(AssetRepository assetRepository)
+      : cache(), assetRepository(std::move(assetRepository)) {}
+
+  AssetRef load(const Path& path, const AssetFactory& factory) {
     AssetRef ref = cache.find(path);
 
-    if(!ref) {
-      auto assetRoot = assetRepository(path);
-      AssetBuilder<TAsset> builder(*assetRoot);
-      ref = builder(std::forward<Args>(args)...);
+    if (!ref) {
+      auto asset = assetRepository(path);
+      ref = factory(*asset);
       cache[path] = ref;
     }
 

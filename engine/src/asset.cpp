@@ -1,5 +1,4 @@
 #include <enjam/asset.h>
-#include "enjam/type_traits_helpers.h"
 
 namespace Enjam {
 
@@ -25,7 +24,7 @@ Asset& Asset::operator[](size_t index) {
 }
 
 const Asset* Asset::at(const std::string& name) const {
-  if (!is<object_t>()) { return nullptr; }
+  if (!holds<object_t>()) { return nullptr; }
 
   auto& obj = std::get<object_t>(value);
   std::hash<std::string> hash;
@@ -51,7 +50,7 @@ void Asset::pushBack(Asset&& asset) {
 }
 
 bool Asset::isNumeric() const {
-  return is<int_t>() || is<float_t>();
+  return holds<int_t>() || holds<float_t>();
 }
 
 }

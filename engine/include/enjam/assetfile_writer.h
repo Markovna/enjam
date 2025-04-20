@@ -23,7 +23,7 @@ class AssetFileWriter {
 
  public:
   explicit AssetFileWriter(TOutput&& output, fmtflag_t flags = 0)
-    : output(std::move(output)), flags(flags) { }
+      : output(std::move(output)), flags(flags) {}
 
   void write(const Asset&, uint intent = 0);
 
@@ -35,8 +35,8 @@ class AssetFileWriter {
   void printIntent(uint intent);
   void printNextLine();
 
-  void printObject(const Asset::object_t&, uint intent);
-  void printArray(const Asset::array_t&, uint intent);
+  void printArray(Asset::const_iterator, Asset::const_iterator, uint intent);
+  void printObject(Asset::const_iterator, Asset::const_iterator, uint intent);
 
  private:
   TOutput output;
@@ -45,19 +45,40 @@ class AssetFileWriter {
 
 template<class TOutput>
 void AssetFileWriter<TOutput>::write(const Asset& asset, uint intent) {
-  asset.visit(overloaded {
-      [this](auto& val) { output << val; },
-      [this](const Asset::string_t& val) { output << "\"" << val << "\""; },
-      [this, intent](const Asset::array_t& val) { printArray(val, intent); },
-      [this, intent](const Asset::object_t& val) { printObject(val, intent); }
-  });
+  switch(asset.type()) {
+    case AssetType::INTEGER: {
+      output << asset.as<int64_t>();
+      break;
+    }
+    case AssetType::FLOAT: {
+      output << asset.as<float>();
+      break;
+    }
+    case AssetType::STRING: {
+      output << '"' << asset.as<std::string>() << '"';
+      break;
+    }
+    case AssetType::ARRAY: {
+      printArray(asset.begin(), asset.end(), intent);
+      break;
+    }
+    case AssetType::OBJECT: {
+      printObject(asset.begin(), asset.end(), intent);
+      break;
+    }
+    case AssetType::BUFFER: {
+      auto& bufferLoader = asset.getBufferLoader();
+      output << bufferLoader;
+      break;
+    }
+  }
 }
 
 template<class TWriter>
 void AssetFileWriter<TWriter>::printIntent(uint intent) {
-  if((flags & AssetFileWriterFlags::pretty) == AssetFileWriterFlags::pretty) {
-    for(int i = 0; i < intent; i++) {
-      if(!(flags & AssetFileWriterFlags::omitFirstEnclosure) || i > 0)
+  if ((flags & AssetFileWriterFlags::pretty) == AssetFileWriterFlags::pretty) {
+    for (int i = 0; i < intent; i++) {
+      if (!(flags & AssetFileWriterFlags::omitFirstEnclosure) || i > 0)
         output << "    ";
     }
   }
@@ -65,60 +86,69 @@ void AssetFileWriter<TWriter>::printIntent(uint intent) {
 
 template<class TWriter>
 void AssetFileWriter<TWriter>::printNextLine() {
-  if((flags & AssetFileWriterFlags::pretty) == AssetFileWriterFlags::pretty) {
+  if ((flags & AssetFileWriterFlags::pretty) == AssetFileWriterFlags::pretty) {
     output << "\n";
   }
 }
 
 template<class TWriter>
-void AssetFileWriter<TWriter>::printObject(const Asset::object_t& val, uint intent) {
-  if(!(flags & AssetFileWriterFlags::omitFirstEnclosure) || intent > 0) {
+void AssetFileWriter<TWriter>::printObject(Asset::const_iterator begin, Asset::const_iterator end, uint intent) {
+  if (!(flags & AssetFileWriterFlags::omitFirstEnclosure) || intent > 0) {
     output << '{';
-    printNextLine();
   }
   size_t i = 0;
   intent++;
-  for(auto& prop : val) {
-    printIntent(intent);
-    output << prop.name << ": ";
-    write(prop.value, intent);
-    if(i < val.size() - 1) {
+  for(auto it = begin; it != end; it++) {
+    if(it != begin) {
       output << ',';
     }
     printNextLine();
+    printIntent(intent);
+    output << it.key() << ": ";
+    write(*it, intent);
     i++;
   }
   intent--;
-  if(!(flags & AssetFileWriterFlags::omitFirstEnclosure) || intent > 0) {
+
+  if(begin != end) {
+    printNextLine();
+  }
+
+  if (!(flags & AssetFileWriterFlags::omitFirstEnclosure) || intent > 0) {
     printIntent(intent);
     output << '}';
   }
 }
 
 template<class TWriter>
-void AssetFileWriter<TWriter>::printArray(const Asset::array_t& val, uint intent) {
+void AssetFileWriter<TWriter>::printArray(Asset::const_iterator begin, Asset::const_iterator end, uint intent) {
   bool flat = true;
-  if(flags & AssetFileWriterFlags::pretty) {
-    flat &= std::any_of(val.begin(), val.end(), [](auto& v) { return !v.isNumeric(); });
+  if (flags & AssetFileWriterFlags::pretty) {
+    flat &= !std::any_of(begin, end, [](auto& v) { return !v.isNumeric(); });
   }
+
   output << '[';
-  if(!flat) {
-    printNextLine();
-  }
   intent++;
 
-  for(auto i = 0 ; i < val.size(); i++) {
-    auto& item = val[i];
-    write(item, intent);
-    if(i < val.size() - 1) {
+  for (auto it = begin; it != end; it++) {
+    if(it != begin) {
       output << ',';
     }
-    if(!flat) {
+    if (!flat) {
       printNextLine();
+      printIntent(intent);
     }
+    auto& item = *it;
+    write(item, flat ? 0 : intent);
   }
+
   intent--;
-  printIntent(intent);
+
+  if(!flat && begin != end) {
+    printNextLine();
+    printIntent(intent);
+  }
+
   output << ']';
 }
 

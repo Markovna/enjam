@@ -18,7 +18,6 @@
 namespace Enjam {
 
 class Asset;
-class AssetRoot;
 
 class AssetsLoader {
  public:
@@ -29,13 +28,10 @@ class AssetsLoader {
 
 class AssetsFilesystemRep : public AssetsLoader {
  public:
-  explicit AssetsFilesystemRep(Path path = {}) : rootPath(std::move(path)) { }
+  explicit AssetsFilesystemRep(Path path = {}) : rootPath(std::move(path)) {}
 
   Asset load(const Path& path) override;
   void save(const Path& path, const Asset& asset);
-
- private:
-  static AssetBuffer loadBuffer(const AssetsLoader::Path&);
 
  private:
   Path rootPath;
@@ -51,7 +47,7 @@ class AssetsRepository {
   using Ref = std::shared_ptr<Asset>;
 
   explicit AssetsRepository(AssetsLoader& loader)
-    : loader(loader), assetsByPath() { }
+      : loader(loader), assetsByPath() {}
 
   Ref load(const Path& path);
 

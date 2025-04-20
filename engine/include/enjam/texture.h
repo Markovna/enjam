@@ -17,11 +17,11 @@ class Texture {
     backend.destroyTexture(handle);
   }
 
-  void setBuffer(const char* data) {
+  void setBuffer(const void* data) {
     backend.setTextureData(handle, 0, 0, 0, 0, width, height, 0, data);
   }
 
-  const TextureHandle& getHandle() const { return handle; }
+  [[nodiscard]] const TextureHandle& getHandle() const { return handle; }
 
  private:
   RendererBackend& backend;
@@ -30,26 +30,18 @@ class Texture {
   int height;
 };
 
-template<>
-class AssetBuilder<Texture> {
- public:
-  explicit AssetBuilder(const AssetRoot& assetRoot) {
-    width = assetRoot.asset.at("width")->as<int>();
-    height = assetRoot.asset.at("height")->as<int>();
-    auto dataHash = assetRoot.asset.at("data")->as<size_t>();
-    buffer = assetRoot.bufferLoader(dataHash);
-  }
+struct TextureAssetFactory {
+  AssetRef<Texture> operator()(const Asset& asset) {
+    auto width = asset.at("width")->as<int>();
+    auto height = asset.at("height")->as<int>();
+    auto buffer = asset.at("data")->loadBuffer();
 
-  AssetRef<Texture> operator()(RendererBackend& rendererBackend) {
     auto ptr = std::make_shared<Texture>(rendererBackend, width, height);
     ptr->setBuffer(buffer.data());
     return ptr;
   }
 
- private:
-  int width;
-  int height;
-  AssetRoot::Buffer buffer;
+  RendererBackend& rendererBackend;
 };
 
 }

@@ -36,8 +36,8 @@ class SandboxSimulation : public Enjam::Simulation {
       , rendererBackend(rendererBackend)
       , camera(camera)
       , scene(scene)
-      , textureAssets([&](auto& path) { return assetsRepository.load(path); })
-      , dccAssets([&](auto& path) { return assetsRepository.load(path); })
+      , textureAssets([&](auto& path) { return assetsRepository.load(path); }, Enjam::TextureAssetFactory { })
+      , dccAssets([&](auto& path) { return assetsRepository.load(path); }, Enjam::DCCAssetFactory { })
       {}
 
   void start() override {
@@ -59,10 +59,8 @@ class SandboxSimulation : public Enjam::Simulation {
 
     programHandle = rendererBackend.createProgram(programData);
 
-    camera.projectionMatrix = Enjam::math::mat4f::perspective(60, 1.4, 0.1, 10);
-    camera.position = Enjam:: math::vec3f { 0, 0, -8 };
-    camera.front = Enjam::math::vec3f { 0, 0, 1 };
-    camera.up = Enjam::math::vec3f { 0, 1, 0 };
+    camera.projectionMatrix = Enjam::math::mat4f::perspective(60, 1.4, 0.1, 100);
+    camera.modelMatrix = Enjam::math::mat4f::lookAt(Enjam::math::vec3f { 0, 0, -8 }, Enjam::math::vec3f{ 0, 0, 1 }, Enjam::math::vec3f{ 0, 1, 0 });
 
     input.onKeyPress().add(onKeyPress);
 
@@ -72,10 +70,10 @@ class SandboxSimulation : public Enjam::Simulation {
         }
     });
 
-    dummyTex = textureAssets.load("assets/textures/dummy.nj_tex", Enjam::TextureAssetFactory { .rendererBackend = rendererBackend } );
+    dummyTex = textureAssets.load("assets/textures/dummy.nj_tex", rendererBackend);
     rendererBackend.updateDescriptorSetTexture(descriptorSetHandle, 0, dummyTex->getHandle());
 
-    cubeAsset = dccAssets.load("assets/models/cube.nj_dcc", Enjam::DCCAssetFactory { });
+    cubeAsset = dccAssets.load("assets/models/cube.nj_dcc");
     vertexBuffer.reset(
         new Enjam::VertexBuffer {
           rendererBackend,
@@ -136,12 +134,11 @@ class SandboxSimulation : public Enjam::Simulation {
   Enjam::RendererBackend& rendererBackend;
   Enjam::Camera& camera;
   Enjam::Scene& scene;
-  Enjam::AssetsManager<Enjam::Texture> textureAssets;
-  Enjam::AssetsManager<Enjam::DCCAsset> dccAssets;
 
+  Enjam::AssetsManager<Enjam::Texture, Enjam::TextureAssetFactory> textureAssets;
+  Enjam::AssetsManager<Enjam::DCCAsset, Enjam::DCCAssetFactory> dccAssets;
   Enjam::AssetRef<Enjam::Texture> dummyTex;
   Enjam::AssetRef<Enjam::DCCAsset> cubeAsset;
-
   std::unique_ptr<Enjam::VertexBuffer> vertexBuffer;
   std::unique_ptr<Enjam::IndexBuffer> indexBuffer;
   Enjam::ProgramHandle programHandle = { };
@@ -149,20 +146,41 @@ class SandboxSimulation : public Enjam::Simulation {
   Enjam::KeyPressEvent::EventHandler onKeyPress = Enjam::KeyPressEvent::EventHandler {
     [this](const Enjam::KeyPressEventArgs& args) {
       using KeyCode = Enjam::KeyCode;
+      if(args.keyCode == KeyCode::A) {
+        camera.modelMatrix *= Enjam::math::mat4f::translation(Enjam::math::vec3f {-0.1, 0, 0});
+      }
+
+      if(args.keyCode == KeyCode::D) {
+        camera.modelMatrix *= Enjam::math::mat4f::translation(Enjam::math::vec3f {0.1, 0, 0});
+      }
+
+      if(args.keyCode == KeyCode::W) {
+        camera.modelMatrix *= Enjam::math::mat4f::translation(Enjam::math::vec3f {0, 0, -0.1});
+      }
+
+      if(args.keyCode == KeyCode::S) {
+        camera.modelMatrix *= Enjam::math::mat4f::translation(Enjam::math::vec3f {0, 0, 0.1});
+      }
+
+      auto rotationSpeed = 0.04;
       if(args.keyCode == KeyCode::Left) {
-        camera.position += Enjam::math::vec3f {0.1, 0, 0};
+        auto rotation = Enjam::math::mat4f::rotation(-rotationSpeed, Enjam::math::vec3f {0, 1, 0});
+        camera.modelMatrix *= rotation;
       }
 
       if(args.keyCode == KeyCode::Right) {
-        camera.position += Enjam::math::vec3f {-0.1, 0, 0};
+        auto rotation = Enjam::math::mat4f::rotation(rotationSpeed, Enjam::math::vec3f {0, 1, 0});
+        camera.modelMatrix *= rotation;
       }
 
       if(args.keyCode == KeyCode::Up) {
-        camera.position += Enjam::math::vec3f {0, -0.1, 0};
+        auto rotation = Enjam::math::mat4f::rotation(-rotationSpeed, Enjam::math::vec3f {-1, 0, 0});
+        camera.modelMatrix *= rotation;
       }
 
       if(args.keyCode == KeyCode::Down) {
-        camera.position += Enjam::math::vec3f {0, 0.1, 0};
+        auto rotation = Enjam::math::mat4f::rotation(rotationSpeed, Enjam::math::vec3f {-1, 0, 0});
+        camera.modelMatrix *= rotation;
       }
     }};
 };

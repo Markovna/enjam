@@ -64,7 +64,7 @@ class AssetsCache {
   std::unordered_map<std::string, std::weak_ptr<TAsset>> cacheByPath;
 };
 
-template<class TAsset>
+template<class TAsset, class TAssetFactory>
 class AssetsManager {
  public:
   using AssetRef = AssetRef<TAsset>;
@@ -73,15 +73,16 @@ class AssetsManager {
 
   using AssetFactory = std::function<AssetRef(const Asset&)>;
 
-  explicit AssetsManager(AssetRepository assetRepository)
-      : cache(), assetRepository(std::move(assetRepository)) {}
+  AssetsManager(AssetRepository assetRepository, TAssetFactory assetFactory)
+      : cache(), assetRepository(std::move(assetRepository)), assetFactory(std::move(assetFactory)) {}
 
-  AssetRef load(const Path& path, const AssetFactory& factory) {
+  template<class... Args>
+  AssetRef load(const Path& path, Args&&... args) {
     AssetRef ref = cache.find(path);
 
     if (!ref) {
       auto asset = assetRepository(path);
-      ref = factory(*asset);
+      ref = assetFactory(*asset, std::forward<Args>(args)...);
       cache[path] = ref;
     }
 
@@ -93,6 +94,7 @@ class AssetsManager {
 
   Cache cache;
   AssetRepository assetRepository;
+  TAssetFactory assetFactory;
 };
 
 }

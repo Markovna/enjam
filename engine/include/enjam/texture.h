@@ -31,7 +31,7 @@ class Texture {
 };
 
 struct TextureAssetFactory {
-  AssetRef<Texture> operator()(const Asset& asset) {
+  AssetRef<Texture> operator()(const Asset& asset, RendererBackend& rendererBackend) {
     auto width = asset.at("width")->as<int>();
     auto height = asset.at("height")->as<int>();
     auto buffer = asset.at("data")->loadBuffer();
@@ -40,8 +40,6 @@ struct TextureAssetFactory {
     ptr->setBuffer(buffer.data());
     return ptr;
   }
-
-  RendererBackend& rendererBackend;
 };
 
 }

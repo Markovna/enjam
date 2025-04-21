@@ -10,10 +10,12 @@ namespace Enjam {
 
 struct Camera {
   math::mat4f projectionMatrix;
-  math::mat4f viewMatrix;
-  math::vec3f position;
-  math::vec3f front;
-  math::vec3f up;
+  math::mat4f modelMatrix;
+
+  inline math::vec3f getLeft() { return modelMatrix[0].xyz; }
+  inline math::vec3f getUp() { return modelMatrix[1].xyz; }
+  inline math::vec3f getForward() { return modelMatrix[2].xyz; }
+  inline math::vec3f getPosition() { return modelMatrix[3].xyz; }
 };
 
 struct PerViewUniforms {

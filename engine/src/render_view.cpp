@@ -7,7 +7,7 @@ namespace Enjam {
 void RenderView::prepareBuffers() {
   // prepare per view buffer
   perViewUniformBufferData.projection = camera->projectionMatrix;
-  perViewUniformBufferData.view = math::mat4f::lookAt(camera->position, camera->front, camera->up);
+  perViewUniformBufferData.view = inverse(camera->modelMatrix);
 
   // prepare per object buffer
   auto& primitives = scene->getPrimitives();

@@ -1,5 +1,0 @@
-add_executable(assetparser_tests asset_fileparser_test.cpp)
-target_link_libraries(assetparser_tests PRIVATE enjam)
-
-add_executable(asset_file_serializer asset_file_serializer.cpp)
-target_link_libraries(asset_file_serializer PRIVATE enjam)

@@ -1,0 +1,2 @@
+add_executable(assetfile_tests assetfile_tests.cpp)
+target_link_libraries(assetfile_tests PRIVATE enjam)

@@ -64,7 +64,7 @@ class AssetFileReader {
 
  public:
   AssetFileReader(TInput& input)
-    : lexer(input.fileStream()), input(input) {
+    : lexer(input.input), input(input) {
 
   }
 
@@ -135,7 +135,21 @@ bool AssetFileReader<TInput>::parseProperty(Asset& value) {
     }
     case token_type::hex_int_value: {
       auto hash = lexer.getInt();
-      value = input.getBufferLoader(hash);
+      value = [hash, buffers = input.buffers]() -> ByteArray {
+        auto stream = buffers(hash);
+        std::vector<std::istream::char_type> buffer;
+        stream->seekg(0, std::ios::end);
+        auto size = stream->tellg();
+        if (size) {
+          stream->seekg(0, std::ios::beg);
+          buffer.resize(size);
+
+          stream->read(&buffer.front(), size);
+        }
+
+        return { buffer.begin(), buffer.end() };
+      };
+
       return true;
     }
     case token_type::string_value: {

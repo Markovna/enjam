@@ -34,6 +34,10 @@ class AssetsFilesystemRep : public AssetsLoader {
   void save(const Path& path, const Asset& asset);
 
  private:
+  std::unique_ptr<std::istream> getBufferInput(const Path& path, uint64_t hash);
+  std::unique_ptr<std::ostream> getBufferOutput(const Path& path, uint64_t hash);
+
+ private:
   Path rootPath;
 };
 

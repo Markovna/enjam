@@ -357,7 +357,7 @@ Asset& Asset::operator=(T&& arg) {
 
 template<class T, std::enable_if_t<std::is_invocable<T>::value, bool>>
 Asset& Asset::operator=(T&& func) {
-  value = func;
+  value = std::forward<T>(func);
   return *this;
 }
 

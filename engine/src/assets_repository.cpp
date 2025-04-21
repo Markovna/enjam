@@ -7,99 +7,41 @@
 
 namespace Enjam {
 
-class AssetFileOutput {
+struct AssetFileOutput {
  public:
-  explicit AssetFileOutput(const std::filesystem::path& path)
-    : path(path), fileOutput(path), buffersDirectory(path) {
-    buffersDirectory.replace_extension();
-  }
+  using BufferStream = std::unique_ptr<std::ostream>;
+  using BufferStreamProvider = std::function<BufferStream(uint64_t)>;
 
-  template<class TStream, class T, class Enable = void>
-  struct has_output_operator : std::false_type { };
-
-  template<class TStream, class T>
-  struct has_output_operator<TStream, T,
-      std::void_t<decltype(std::declval<TStream>() << std::declval<T>())>>
-      : std::true_type {};
-
-  template<class T, std::enable_if_t<has_output_operator<std::ostream&, T>::value, nullptr_t> = nullptr>
-  AssetFileOutput& operator<<(T&& arg) {
-    fileOutput << std::forward<T>(arg);
-    return *this;
-  }
-
-  AssetFileOutput& operator<<(const AssetBufferLoader& bufferLoader) {
-    auto buffer = bufferLoader();
-    auto hash = std::hash<ByteArray>{}(buffer);
-
-    fileOutput << fmt::format("{:#x}", hash);
-
-    if(!std::filesystem::exists(buffersDirectory)) {
-      std::filesystem::create_directories(buffersDirectory);
-    }
-
-    std::ofstream file(buffersDirectory / fmt::format("{:x}", hash), std::ios::out | std::ios::binary);
-
-    std::vector<std::ofstream::char_type> fileBuffer { buffer.begin(), buffer.end() };
-    file.write(fileBuffer.data(), fileBuffer.size());
-    file.close();
-
-    return *this;
-  }
-
- private:
-  std::filesystem::path path;
-  std::filesystem::path buffersDirectory;
-  std::ofstream fileOutput;
+  std::ostream& out;
+  BufferStreamProvider buffers;
 };
 
-class AssetFileInput {
+struct AssetFileInput {
  public:
-  explicit AssetFileInput(const std::filesystem::path& path)
-      : path(path), fileInput(path), buffersDirectory(path) {
-    buffersDirectory.replace_extension();
-  }
+  using BufferStream = std::unique_ptr<std::istream>;
+  using BufferStreamProvider = std::function<BufferStream(uint64_t)>;
 
-  std::istream& fileStream() { return fileInput; }
-
-  AssetBufferLoader getBufferLoader(uint64_t hash) {
-    return [path = buffersDirectory / fmt::format("{:x}", hash)] () -> ByteArray {
-      auto stream = std::ifstream(path, std::ios::in | std::ios::binary);
-      if(!stream) {
-        ENJAM_ERROR("Loading buffer failed {}", path.c_str());
-        return { };
-      }
-
-      std::vector<std::ifstream::char_type> buffer;
-      stream.seekg(0, std::ios::end);
-      auto size = stream.tellg();
-      if (size) {
-        stream.seekg(0, std::ios::beg);
-        buffer.resize(size);
-
-        stream.read(&buffer.front(), size);
-      }
-
-      return { buffer.begin(), buffer.end() };
-    };
-  }
-
- private:
-  std::filesystem::path path;
-  std::filesystem::path buffersDirectory;
-  std::ifstream fileInput;
+  std::istream& input;
+  BufferStreamProvider buffers;
 };
 
 void AssetsFilesystemRep::save(const Path& path, const Asset& asset) {
   auto fullPath = rootPath / path;
 
-  auto folder = fullPath.parent_path();
-  if(!std::filesystem::exists(folder)) {
-    std::filesystem::create_directories(folder);
+  auto directory = fullPath.parent_path();
+  if(!std::filesystem::exists(directory)) {
+    std::filesystem::create_directories(directory);
   }
 
+  std::ofstream file(fullPath);
+  AssetFileOutput output {
+    .out = file,
+    .buffers = [this, path](uint64_t hash) -> std::unique_ptr<std::ostream> {
+      return getBufferOutput(path, hash);
+    }
+  };
   AssetFileWriter {
-    AssetFileOutput { fullPath },
+    output,
     AssetFileWriterFlags::pretty | AssetFileWriterFlags::omitFirstEnclosure
   }.write(asset);
 }
@@ -120,10 +62,42 @@ AssetsRepository::Ref AssetsRepository::load(const Path& path) {
   return assetPtr;
 }
 
+
+std::unique_ptr<std::istream> AssetsFilesystemRep::getBufferInput(const Path& assetPath, uint64_t hash) {
+  auto path = (rootPath / assetPath).replace_extension() / fmt::format("{:x}", hash);
+  auto stream = std::make_unique<std::ifstream>(path, std::ios::in | std::ios::binary);
+  if (stream->fail()) {
+    ENJAM_ERROR("Loading buffer failed {}", path.c_str());
+    return { };
+  }
+  return stream;
+}
+
+std::unique_ptr<std::ostream> AssetsFilesystemRep::getBufferOutput(const Path& assetPath, uint64_t hash) {
+  auto buffersPath = (rootPath / assetPath).replace_extension();
+  if(!std::filesystem::exists(buffersPath)) {
+    std::filesystem::create_directories(buffersPath);
+  }
+
+  auto path = buffersPath / fmt::format("{:x}", hash);
+  auto file = std::make_unique<std::ofstream>(path, std::ios::out | std::ios::binary);
+  if(file->fail()) {
+    ENJAM_ERROR("Saving buffer failed {}", path.c_str());
+    return { };
+  }
+  return file;
+}
+
 Asset AssetsFilesystemRep::load(const AssetsLoader::Path& path) {
   auto fullPath = rootPath / path;
 
-  AssetFileInput fileInput { fullPath };
+  std::ifstream file(fullPath);
+  AssetFileInput fileInput {
+      .input = file,
+      .buffers = [this, path](uint64_t hash) -> std::unique_ptr<std::istream> {
+        return getBufferInput(path, hash);
+      }
+  };
   Asset asset;
   bool valid = AssetFileReader { fileInput }.parse(asset);
   ENJAM_ASSERT(valid);

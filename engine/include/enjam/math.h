@@ -308,10 +308,9 @@ class QuatProductOperators {
    */
   template<typename U>
   friend inline constexpr
-  TQuat<arithmetic_result_t<T, U>>  operator*(
-      const TQuat<T>& q, const TQuat<U>& r) {
+  TQuat<arithmetic_result_t<T, U>>  operator*(const TQuat<T>& q, const TQuat<U>& r) {
     // could be written as:
-    //  return QUATERNION<T>(
+    //  return TQuat<T>(
     //            q.w*r.w - dot(q.xyz, r.xyz),
     //            q.w*r.xyz + r.w*q.xyz + cross(q.xyz, r.xyz));
     return {

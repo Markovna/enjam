@@ -17,17 +17,20 @@ bool generateAsset(const std::filesystem::path& inputPath, const std::filesystem
 
   int width, height, channels;
   auto data = stbi_load(inputPath.c_str(), &width, &height, &channels, 0);
-
   auto size = width * height * channels;
+
+
   AssetsFilesystemRep repository;
-  auto texDataHash = repository.saveBuffer(outputPath, reinterpret_cast<char*>(data), size);
+//  auto texDataHash = repository.saveBuffer(outputPath, reinterpret_cast<char*>(data), size);
 
   Asset asset;
   asset["source"] = inputPath;
   asset["width"] = width;
   asset["height"] = height;
   asset["channels"] = channels;
-  asset["data"] = texDataHash;
+
+  ByteArray buffer { data, data + size };
+  asset["data"] = [buffer = std::move(buffer)](){ return buffer; };
 
   repository.save(outputPath, asset);
 

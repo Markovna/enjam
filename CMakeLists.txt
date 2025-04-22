@@ -13,7 +13,7 @@ add_subdirectory(libs/njctr EXCLUDE_FROM_ALL)
 add_subdirectory(engine)
 add_subdirectory(editor)
 
-add_subdirectory(tools/njtex)
+add_subdirectory(tools/tex_importer)
 add_subdirectory(tools/dcc_importer)
 
 add_subdirectory(sandbox)

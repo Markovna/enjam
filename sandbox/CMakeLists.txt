@@ -31,10 +31,10 @@ foreach(resource ${TEXTURES})
 
     add_custom_command(
         OUTPUT ${output_path}
-        COMMAND njtex -o ${output_path} ${input_path}
+        COMMAND tex_importer -o ${output_path} ${input_path}
         MAIN_DEPENDENCY ${resource}
-        DEPENDS njtex
-        COMMENT "Generating asset file ${resource} to ${output_path}"
+        DEPENDS tex_importer
+        COMMENT "Generating asset file ${resource} in ${output_path}"
     )
     list(APPEND ASSETS ${output_path})
 endforeach()
@@ -50,7 +50,7 @@ foreach(resource ${MODELS})
             COMMAND dcc_importer -o ${output_path} ${input_path}
             MAIN_DEPENDENCY ${resource}
             DEPENDS dcc_importer
-            COMMENT "Generating asset file ${resource} to ${output_path}"
+            COMMENT "Generating asset file ${resource} in ${output_path}"
     )
     list(APPEND ASSETS ${output_path})
 endforeach()

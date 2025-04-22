@@ -15,7 +15,7 @@ void IndexBuffer::destroy(RendererBackend& backend) {
   backend.destroyIndexBuffer(handle);
 }
 
-VertexBuffer::VertexBuffer(RendererBackend& backend, std::initializer_list<VertexAttribute> attributes, uint32_t count) {
+VertexBuffer::VertexBuffer(RendererBackend& backend, std::initializer_list<VertexAttribute> attributes, uint64_t count) {
   handle = backend.createVertexBuffer(attributes, count);
 }
 

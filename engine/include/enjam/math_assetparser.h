@@ -17,8 +17,8 @@ struct AssetParser<math::mat4f> {
   }
 
   static void toAsset(Asset& asset, const math::mat4f& val) {
-    for (auto r = 0; r < val.NUM_ROWS; r++) {
-      for (auto c = 0; c < val.NUM_COLS; c++) {
+    for (auto r = 0; r < math::mat4f::NUM_ROWS; r++) {
+      for (auto c = 0; c < math::mat4f::NUM_COLS; c++) {
         asset.pushBack(val[r][c]);
       }
     }

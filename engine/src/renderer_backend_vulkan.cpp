@@ -22,10 +22,23 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 
   return VK_FALSE;
 }
-#endif
 
-bool RendererBackendVulkan::init() {
-#if ENJAM_VULKAN_ENABLED(ENJAM_VULKAN_DEBUG_UTILS)
+VkResult vkCreateDebugUtilsMessenger(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+  auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+  if (func != nullptr) {
+    return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+  }
+  return VK_ERROR_EXTENSION_NOT_PRESENT;
+}
+
+void vkDestroyDebugUtilsMessenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
+  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+  if (func != nullptr) {
+    func(instance, debugMessenger, pAllocator);
+  }
+}
+
+void createDebugUtilsMessenger(VkInstance instance, VkAllocationCallbacks* alloc, VkDebugUtilsMessengerEXT* messenger) {
   VkDebugUtilsMessengerCreateInfoEXT createInfo {
       .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
       .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
@@ -33,24 +46,130 @@ bool RendererBackendVulkan::init() {
       .pfnUserCallback = debugCallback,
       .pUserData = nullptr
   };
-  VkResult result = vkCreateDebugUtilsMessengerEXT(instance, &createInfo, vkAlloc, &debugMessenger);
+  VkResult result = vkCreateDebugUtilsMessenger(instance, &createInfo, alloc, messenger);
   if(result != VK_SUCCESS) {
     ENJAM_ERROR("Failed to set up vulkan debug messenger!");
   }
+}
+
 #endif
 
+int64_t getGraphicsQueueFamilyIndex(VkPhysicalDevice device, VkQueueFlags flags) {
+  uint32_t queueFamilyCount = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
-  return false;
+  if(queueFamilyCount == 0) {
+    return -1;
+  }
+
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+  int64_t graphicsQueueFamilyIndex = -1;
+  for (uint32_t i = 0; i < queueFamilies.size(); ++i) {
+    VkQueueFamilyProperties props = queueFamilies[i];
+    if (props.queueCount != 0 && props.queueFlags & flags) {
+      graphicsQueueFamilyIndex = i;
+      break;
+    }
+  }
+  return graphicsQueueFamilyIndex;
+}
+
+inline int16_t devicePriorityByType(VkPhysicalDeviceType deviceType) {
+  switch (deviceType) {
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+      return 5;
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+      return 4;
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+      return 3;
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+      return 2;
+    case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+      return 1;
+    default:
+      return -1;
+  }
+}
+
+VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
+  uint32_t deviceCount = 0;
+  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+  if(deviceCount == 0) {
+    ENJAM_ERROR("Failed to find GPUs with Vulkan support!");
+    return VK_NULL_HANDLE;
+  }
+
+  std::vector<VkPhysicalDevice> devices(deviceCount);
+  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+  struct DeviceInfo {
+    VkPhysicalDevice device = VK_NULL_HANDLE;
+    int16_t priority;
+  };
+
+  std::vector<DeviceInfo> deviceInfos;
+  deviceInfos.reserve(devices.size());
+  for(auto& device : devices) {
+    VkPhysicalDeviceProperties deviceProperties;
+    VkPhysicalDeviceFeatures deviceFeatures;
+    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+    const int major = VK_API_VERSION_MAJOR(deviceProperties.apiVersion);
+    const int minor = VK_API_VERSION_MINOR(deviceProperties.apiVersion);
+
+    if(major < VULKAN_MINIMUM_REQUIRED_VERSION_MAJOR ||
+        (major == VULKAN_MINIMUM_REQUIRED_VERSION_MAJOR && minor < VULKAN_MINIMUM_REQUIRED_VERSION_MINOR)) {
+      continue;
+    }
+
+    if(getGraphicsQueueFamilyIndex(device, VK_QUEUE_GRAPHICS_BIT) < 0) {
+      continue;
+    }
+
+    deviceInfos.push_back({
+        .device = device,
+        .priority = devicePriorityByType(deviceProperties.deviceType)
+    });
+  }
+
+  std::sort(deviceInfos.begin(), deviceInfos.end(), [](auto& left, auto& right) {
+    if (right.device == VK_NULL_HANDLE) {
+      return false;
+    }
+    if (left.device == VK_NULL_HANDLE) {
+      return true;
+    }
+
+    return left.priority < right.priority;
+  });
+
+  return deviceInfos.back().device;
+}
+
+bool RendererBackendVulkan::init() {
+#if ENJAM_VULKAN_ENABLED(ENJAM_VULKAN_DEBUG_UTILS)
+  createDebugUtilsMessenger(instance, vkAlloc, &debugMessenger);
+#endif
+
+  VkPhysicalDevice physicalDevice = selectPhysicalDevice(instance);
+  if(physicalDevice == VK_NULL_HANDLE) {
+    ENJAM_ERROR("Vulkan failed to find a suitable GPU!");
+  }
+
+  return true;
 }
 
 void RendererBackendVulkan::shutdown() {
-  vkDestroyInstance(instance, nullptr);
-
 #if ENJAM_VULKAN_ENABLED(ENJAM_VULKAN_DEBUG_UTILS)
   if (debugMessenger) {
-    vkDestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+    vkDestroyDebugUtilsMessenger(instance, debugMessenger, nullptr);
   }
 #endif
+
+  vkDestroyInstance(instance, nullptr);
 }
 
 void RendererBackendVulkan::beginFrame() {

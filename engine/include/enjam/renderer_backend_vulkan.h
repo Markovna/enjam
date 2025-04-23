@@ -7,6 +7,9 @@
 
 namespace Enjam {
 
+constexpr static const int VULKAN_MINIMUM_REQUIRED_VERSION_MAJOR = 1;
+constexpr static const int VULKAN_MINIMUM_REQUIRED_VERSION_MINOR = 1;
+
 class RendererBackendVulkan : public RendererBackend {
  public:
   explicit RendererBackendVulkan(VkInstance&& inst) : instance(inst) { }
@@ -53,7 +56,7 @@ class RendererBackendVulkan : public RendererBackend {
   void destroyTexture(TextureHandle handle) override;
 
  private:
-  constexpr struct VkAllocationCallbacks* vkAlloc = nullptr;
+  struct VkAllocationCallbacks* vkAlloc = nullptr;
 
   VkInstance instance;
   VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;

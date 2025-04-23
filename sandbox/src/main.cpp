@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
 
   auto app = std::make_shared<Enjam::Application>();
   auto platform = std::make_shared<Enjam::PlatformGlfw>();
-  std::shared_ptr<Enjam::RendererBackend> rendererBackend = platform->createRendererBackend();
+  std::shared_ptr<Enjam::RendererBackend> rendererBackend = platform->createRendererBackend(Enjam::RendererBackendType::VULKAN);
   auto renderer = std::make_shared<Enjam::Renderer>(*rendererBackend);
   auto input = std::make_shared<Enjam::Input>();
   auto scene = std::make_shared<Enjam::Scene>();

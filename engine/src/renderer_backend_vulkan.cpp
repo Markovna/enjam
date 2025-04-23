@@ -1,14 +1,58 @@
 #include <enjam/renderer_backend_vulkan.h>
+#include <enjam/vulkan_defines.h>
+#include <enjam/log.h>
+#include <set>
+#include <vulkan/vulkan.h>
 
 namespace Enjam {
 
+#if ENJAM_VULKAN_ENABLED(ENJAM_VULKAN_DEBUG_UTILS)
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData) {
+
+  if(messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    ENJAM_ERROR(pCallbackData->pMessage);
+  }
+  else {
+    ENJAM_WARN(pCallbackData->pMessage);
+  }
+
+  return VK_FALSE;
+}
+#endif
+
 bool RendererBackendVulkan::init() {
+#if ENJAM_VULKAN_ENABLED(ENJAM_VULKAN_DEBUG_UTILS)
+  VkDebugUtilsMessengerCreateInfoEXT createInfo {
+      .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+      .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+      .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+      .pfnUserCallback = debugCallback,
+      .pUserData = nullptr
+  };
+  VkResult result = vkCreateDebugUtilsMessengerEXT(instance, &createInfo, vkAlloc, &debugMessenger);
+  if(result != VK_SUCCESS) {
+    ENJAM_ERROR("Failed to set up vulkan debug messenger!");
+  }
+#endif
+
+
   return false;
 }
 
 void RendererBackendVulkan::shutdown() {
+  vkDestroyInstance(instance, nullptr);
 
+#if ENJAM_VULKAN_ENABLED(ENJAM_VULKAN_DEBUG_UTILS)
+  if (debugMessenger) {
+    vkDestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+  }
+#endif
 }
+
 void RendererBackendVulkan::beginFrame() {
 
 }

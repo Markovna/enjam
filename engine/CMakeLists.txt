@@ -15,7 +15,8 @@ set(ENJAM_SOURCES
         src/assets_repository.cpp
         src/assetfile_reader.cpp
         src/asset.cpp
-        src/byte_array.cpp src/renderer_backend_vulkan.cpp)
+        src/byte_array.cpp
+        src/renderer_backend_vulkan.cpp)
 
 set(ENJAM_HEADERS
         include/enjam/assert.h
@@ -49,7 +50,7 @@ set(ENJAM_HEADERS
         include/enjam/texture.h
         include/enjam/dcc_asset.h
         include/enjam/math_assetparser.h
-        include/enjam/byte_array.h include/enjam/renderer_backend_vulkan.h)
+        include/enjam/byte_array.h include/enjam/renderer_backend_vulkan.h include/enjam/vulkan_defines.h)
 
 find_package(Vulkan REQUIRED)
 

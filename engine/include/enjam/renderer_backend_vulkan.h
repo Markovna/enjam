@@ -2,12 +2,15 @@
 #define ENGINE_INCLUDE_ENJAM_RENDERER_BACKEND_VULKAN_H_
 
 #include <enjam/renderer_backend.h>
+#include <enjam/vulkan_defines.h>
 #include <vulkan/vulkan.h>
 
 namespace Enjam {
 
 class RendererBackendVulkan : public RendererBackend {
  public:
+  explicit RendererBackendVulkan(VkInstance&& inst) : instance(inst) { }
+
   bool init() override;
   void shutdown() override;
   void beginFrame() override;
@@ -48,6 +51,12 @@ class RendererBackendVulkan : public RendererBackend {
                       uint32_t depth,
                       const void* data) override;
   void destroyTexture(TextureHandle handle) override;
+
+ private:
+  constexpr struct VkAllocationCallbacks* vkAlloc = nullptr;
+
+  VkInstance instance;
+  VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 };
 
 }

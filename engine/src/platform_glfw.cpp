@@ -63,6 +63,7 @@ std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBac
       }
 
       requiredExtensions.insert(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+      requiredExtensions.insert(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
       std::vector<const char*> enabledLayers;
 #if ENJAM_VULKAN_ENABLED(ENJAM_VULKAN_VALIDATION)

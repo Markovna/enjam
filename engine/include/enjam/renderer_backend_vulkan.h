@@ -59,6 +59,8 @@ class RendererBackendVulkan : public RendererBackend {
   struct VkAllocationCallbacks* vkAlloc = nullptr;
 
   VkInstance instance;
+  VkDevice device;
+  VkQueue graphicsQueue;
   VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 };
 

@@ -1,8 +1,10 @@
 #include <enjam/renderer_backend_vulkan.h>
+#include <unordered_set>
 #include <enjam/vulkan_defines.h>
 #include <enjam/log.h>
 #include <set>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_beta.h>
 
 namespace Enjam {
 
@@ -54,7 +56,22 @@ void createDebugUtilsMessenger(VkInstance instance, VkAllocationCallbacks* alloc
 
 #endif
 
-int64_t getGraphicsQueueFamilyIndex(VkPhysicalDevice device, VkQueueFlags flags) {
+std::unordered_set<std::string_view> getDeviceExtensions(
+    VkPhysicalDevice device) {
+  uint32_t extensionsCount;
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionsCount, nullptr);
+  std::vector<VkExtensionProperties> extensions(extensionsCount);
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionsCount, extensions.data());
+
+  std::unordered_set<std::string_view> set;
+  for(auto& prop : extensions) {
+    set.emplace(prop.extensionName);
+  }
+
+  return set;
+}
+
+int64_t getQueueFamilyIndex(VkPhysicalDevice device, VkQueueFlags flags) {
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
@@ -125,7 +142,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
       continue;
     }
 
-    if(getGraphicsQueueFamilyIndex(device, VK_QUEUE_GRAPHICS_BIT) < 0) {
+    if(getQueueFamilyIndex(device, VK_QUEUE_GRAPHICS_BIT) < 0) {
       continue;
     }
 
@@ -149,6 +166,63 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
   return deviceInfos.back().device;
 }
 
+VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex) {
+  float queuePriority = 1.0f;
+  VkDeviceQueueCreateInfo queueCreateInfo {
+    .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+    .queueFamilyIndex = queueFamilyIndex,
+    .queueCount = 1,
+    .pQueuePriorities = &queuePriority,
+  };
+
+  VkPhysicalDeviceFeatures deviceFeatures { };
+
+  auto deviceExtensions = getDeviceExtensions(physicalDevice);
+  const std::unordered_set<std::string_view> desiredExtensions {
+      VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+  };
+
+  std::unordered_set<std::string_view> enabledExtensions;
+  for(auto& ext : desiredExtensions) {
+    if(deviceExtensions.find(ext) != deviceExtensions.end()) {
+      enabledExtensions.insert(ext);
+    }
+  }
+
+  void* pNext = nullptr;
+  VkPhysicalDevicePortabilitySubsetFeaturesKHR portability = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
+      .pNext = nullptr,
+      .imageViewFormatSwizzle = VK_TRUE,
+      .mutableComparisonSamplers = VK_TRUE,
+  };
+  if (enabledExtensions.find(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) != enabledExtensions.end()) {
+    portability.pNext = pNext;
+    pNext = &portability;
+  }
+
+  std::vector<const char*> extensions(enabledExtensions.size());
+  std::transform(enabledExtensions.cbegin(), enabledExtensions.cend(), extensions.begin(), [](auto& view) { return view.data(); });
+
+  VkDeviceCreateInfo createInfo {
+    .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+    .pNext = pNext,
+    .queueCreateInfoCount = 1,
+    .pQueueCreateInfos = &queueCreateInfo,
+    .enabledExtensionCount = (uint32_t) extensions.size(),
+    .ppEnabledExtensionNames = extensions.data(),
+    .pEnabledFeatures = &deviceFeatures
+  };
+
+  VkDevice ret;
+  if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &ret) != VK_SUCCESS) {
+    ENJAM_ERROR("Vulkan failed to create logical device!");
+    return VK_NULL_HANDLE;
+  }
+
+  return ret;
+}
+
 bool RendererBackendVulkan::init() {
 #if ENJAM_VULKAN_ENABLED(ENJAM_VULKAN_DEBUG_UTILS)
   createDebugUtilsMessenger(instance, vkAlloc, &debugMessenger);
@@ -158,6 +232,10 @@ bool RendererBackendVulkan::init() {
   if(physicalDevice == VK_NULL_HANDLE) {
     ENJAM_ERROR("Vulkan failed to find a suitable GPU!");
   }
+
+  auto deviceQueueFamilyIndex = (uint32_t) getQueueFamilyIndex(physicalDevice, VK_QUEUE_GRAPHICS_BIT);
+  device = createLogicalDevice(physicalDevice, deviceQueueFamilyIndex);
+  vkGetDeviceQueue(device, deviceQueueFamilyIndex, 0, &graphicsQueue);
 
   return true;
 }
@@ -169,6 +247,7 @@ void RendererBackendVulkan::shutdown() {
   }
 #endif
 
+  vkDestroyDevice(device, nullptr);
   vkDestroyInstance(instance, nullptr);
 }
 

@@ -10,12 +10,13 @@ namespace Enjam {
 
 class ENJAM_API PlatformGlfw : public Platform {
  public:
-  PlatformGlfw();
+  PlatformGlfw() = default;
   std::unique_ptr<RendererBackend> createRendererBackend(RendererBackendType = RendererBackendType::DEFAULT) override;
   void pollInputEvents(Input& input) override;
   void shutdown();
 
 private:
+  void createWindow(RendererBackendType);
   void init();
 
 private:

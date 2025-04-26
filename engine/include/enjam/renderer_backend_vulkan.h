@@ -12,7 +12,8 @@ constexpr static const int VULKAN_MINIMUM_REQUIRED_VERSION_MINOR = 1;
 
 class RendererBackendVulkan : public RendererBackend {
  public:
-  explicit RendererBackendVulkan(VkInstance&& inst) : instance(inst) { }
+  explicit RendererBackendVulkan(VkInstance inst, VkSurfaceKHR surface)
+    : instance(inst), surface(surface) { }
 
   bool init() override;
   void shutdown() override;
@@ -59,6 +60,7 @@ class RendererBackendVulkan : public RendererBackend {
   struct VkAllocationCallbacks* vkAlloc = nullptr;
 
   VkInstance instance;
+  VkSurfaceKHR surface;
   VkDevice device;
   VkQueue graphicsQueue;
   VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;

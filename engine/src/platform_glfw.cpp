@@ -7,15 +7,19 @@
 #include <enjam/assert.h>
 #include <enjam/renderer_backend_opengl.h>
 #include <enjam/renderer_backend_vulkan.h>
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+#if defined(WIN32)
+#define GLFW_EXPOSE_NATIVE_WIN32
+#elif defined(__APPLE__)
+#define GLFW_EXPOSE_NATIVE_COCOA
+#endif
+#include <GLFW/glfw3native.h>
+
 #include <vulkan/vulkan.h>
 
 namespace Enjam {
-
-PlatformGlfw::PlatformGlfw()
-  : initialized(false) {
-  init();
-}
 
 template<class InputIterator, class OutputIterator>
 void vkAvailableLayers(InputIterator first, InputIterator second, OutputIterator output) {
@@ -43,6 +47,8 @@ void vkAvailableLayers(InputIterator first, InputIterator second, OutputIterator
 }
 
 std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBackendType type) {
+  init();
+  createWindow(type);
   ENJAM_ASSERT(window);
 
   switch (type) {
@@ -52,6 +58,7 @@ std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBac
           .makeCurrent = [win = window]() { glfwMakeContextCurrent(win); },
           .swapBuffers = [win = window]() { glfwSwapBuffers(win); }
       };
+      glfwMakeContextCurrent(window);
       return std::make_unique<RendererBackendOpengl>((GLLoaderProc) glfwGetProcAddress, swapChain);
     }
     case VULKAN: {
@@ -63,6 +70,7 @@ std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBac
       }
 
       requiredExtensions.insert(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+      requiredExtensions.insert(VK_KHR_SURFACE_EXTENSION_NAME);
       requiredExtensions.insert(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
       std::vector<const char*> enabledLayers;
@@ -111,7 +119,13 @@ std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBac
         return { };
       }
 
-      return std::make_unique<RendererBackendVulkan>(std::move(instance));
+      VkSurfaceKHR surface;
+      if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
+        ENJAM_ERROR("Failed to create a surface for vulkan renderer backend!");
+        return { };
+      }
+
+      return std::make_unique<RendererBackendVulkan>(instance, surface);
     }
     case DIRECTX:
       ENJAM_ERROR("DIRECTX renderer backend is not supported for current platform.");
@@ -120,26 +134,30 @@ std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBac
 }
 
 void PlatformGlfw::init() {
-  ENJAM_ASSERT(!initialized);
+  if (initialized) {
+    return;
+  }
 
   int status = glfwInit();
   ENJAM_ASSERT(status == GLFW_TRUE);
-
   initialized = true;
 
   glfwSetErrorCallback([](int error_code, const char* description) {
     ENJAM_ERROR("GLFW error: {} (Code: {})", description, error_code);
   });
+}
 
+void PlatformGlfw::createWindow(RendererBackendType type) {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+  if(type != OPENGL) {
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+  }
 
   window = glfwCreateWindow(800, 640, "Enjam", NULL, NULL);
   ENJAM_ASSERT(window != nullptr);
-
-  glfwMakeContextCurrent(window);
 
   // set input callbacks
   glfwSetKeyCallback(window, [](GLFWwindow *w, int key, int scancode, int action, int mods) {

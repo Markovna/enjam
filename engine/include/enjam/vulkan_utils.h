@@ -43,6 +43,10 @@ auto vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice) {
   return set;
 }
 
+auto vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain) {
+  return enumerate<VkImage>(::vkGetSwapchainImagesKHR, device, swapchain);
+}
+
 }
 
 #endif //ENGINE_INCLUDE_ENJAM_VULKAN_UTILS_H_

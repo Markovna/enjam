@@ -130,7 +130,6 @@ std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBac
         return { };
       }
 
-
       int width, height;
       glfwGetFramebufferSize(window, &width, &height);
 

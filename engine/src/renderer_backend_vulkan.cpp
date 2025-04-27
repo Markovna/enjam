@@ -217,22 +217,22 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, uint32_t queueFami
   return ret;
 }
 
-VkSwapchainKHR RendererBackendVulkan::createSwapChain() {
+VulkanSwapChain RendererBackendVulkan::createSwapChain() {
   auto availableFormats = vulkan::utils::vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface);
 
   ENJAM_ASSERT(!availableFormats.empty());
 
-  auto suitableFormat = std::find_if(
+  auto surfaceFormat = std::find_if(
        availableFormats.begin(), availableFormats.end(),
        [](const VkSurfaceFormatKHR& format) {
          return format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
        }
   );
-  ENJAM_ASSERT(suitableFormat != availableFormats.end());
+  ENJAM_ASSERT(surfaceFormat != availableFormats.end());
 
   auto presentModes = vulkan::utils::vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface);
-  auto suitableMode = std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_FIFO_KHR);
-  ENJAM_ASSERT(suitableMode != presentModes.end());
+  auto presentMode = std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_FIFO_KHR);
+  ENJAM_ASSERT(presentMode != presentModes.end());
 
   VkSurfaceCapabilitiesKHR capabilities;
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
@@ -258,22 +258,26 @@ VkSwapchainKHR RendererBackendVulkan::createSwapChain() {
   createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
   createInfo.surface = surface;
   createInfo.minImageCount = imageCount;
-  createInfo.imageFormat = suitableFormat->format;
-  createInfo.imageColorSpace = suitableFormat->colorSpace;
+  createInfo.imageFormat = surfaceFormat->format;
+  createInfo.imageColorSpace = surfaceFormat->colorSpace;
   createInfo.imageExtent = extent;
   createInfo.imageArrayLayers = 1;
   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
   createInfo.preTransform = capabilities.currentTransform;
   createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-  createInfo.presentMode = *suitableMode;
+  createInfo.presentMode = *presentMode;
   createInfo.clipped = VK_TRUE;
   createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-  if(vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+  swapChain = { };
+  if(vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain.vkHandle) != VK_SUCCESS) {
     ENJAM_ERROR("Failed to create swap chain!");
-    return VK_NULL_HANDLE;
+    return swapChain;
   }
 
+  swapChain.extent = extent;
+  swapChain.imageFormat = surfaceFormat->format;
+  swapChain.images = vulkan::utils::vkGetSwapchainImagesKHR(device, swapChain.vkHandle);
   return swapChain;
 }
 
@@ -303,7 +307,7 @@ void RendererBackendVulkan::shutdown() {
   }
 #endif
 
-  vkDestroySwapchainKHR(device, swapChain, nullptr);
+  vkDestroySwapchainKHR(device, swapChain.vkHandle, nullptr);
   vkDestroyDevice(device, nullptr);
   vkDestroySurfaceKHR(instance, surface, nullptr);
   vkDestroyInstance(instance, nullptr);

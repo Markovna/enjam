@@ -11,6 +11,13 @@ namespace Enjam {
 constexpr static const int VULKAN_MINIMUM_REQUIRED_VERSION_MAJOR = 1;
 constexpr static const int VULKAN_MINIMUM_REQUIRED_VERSION_MINOR = 1;
 
+struct VulkanSwapChain {
+  VkSwapchainKHR vkHandle;
+  std::vector<VkImage> images;
+  VkFormat imageFormat;
+  VkExtent2D extent;
+};
+
 class RendererBackendVulkan : public RendererBackend {
  public:
   explicit RendererBackendVulkan(VkInstance inst, VkSurfaceKHR surface, math::vec2i frameBufferSize)
@@ -58,7 +65,7 @@ class RendererBackendVulkan : public RendererBackend {
   void destroyTexture(TextureHandle handle) override;
 
  private:
-  VkSwapchainKHR createSwapChain();
+  VulkanSwapChain createSwapChain();
 
  private:
   struct VkAllocationCallbacks* vkAlloc = nullptr;
@@ -67,7 +74,7 @@ class RendererBackendVulkan : public RendererBackend {
   VkInstance instance;
   VkSurfaceKHR surface;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-  VkSwapchainKHR swapChain;
+  VulkanSwapChain swapChain;
   VkDevice device = VK_NULL_HANDLE;
   VkQueue graphicsQueue = VK_NULL_HANDLE;
   VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;

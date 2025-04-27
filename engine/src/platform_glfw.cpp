@@ -46,6 +46,15 @@ void vkAvailableLayers(InputIterator first, InputIterator second, OutputIterator
   }
 }
 
+class GLSwapChainGLFW : public GLSwapChain {
+ public:
+  GLSwapChainGLFW(GLFWwindow* window) : window(window) { }
+  void makeCurrent() override { glfwMakeContextCurrent(window); }
+  void swapBuffers() override { glfwSwapBuffers(window); }
+ private:
+  GLFWwindow* window;
+};
+
 std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBackendType type) {
   init();
   createWindow(type);
@@ -54,12 +63,8 @@ std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBac
   switch (type) {
     case DEFAULT:
     case OPENGL: {
-      GLSwapChain swapChain {
-          .makeCurrent = [win = window]() { glfwMakeContextCurrent(win); },
-          .swapBuffers = [win = window]() { glfwSwapBuffers(win); }
-      };
       glfwMakeContextCurrent(window);
-      return std::make_unique<RendererBackendOpengl>((GLLoaderProc) glfwGetProcAddress, swapChain);
+      return std::make_unique<RendererBackendOpengl>((GLLoaderProc) glfwGetProcAddress, new GLSwapChainGLFW(window));
     }
     case VULKAN: {
       std::set<std::string_view> requiredExtensions;

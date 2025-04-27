@@ -26,11 +26,15 @@ static void checkErrors(const char* location) {
   }
 }
 
-RendererBackendOpengl::RendererBackendOpengl(GLLoaderProc loaderProc, GLSwapChain swapChain)
+RendererBackendOpengl::RendererBackendOpengl(GLLoaderProc loaderProc, GLSwapChain* swapChain)
   : loaderProc(loaderProc)
-  , swapChain(std::move(swapChain))
+  , swapChain(swapChain)
   , boundDescriptorSets()
   { }
+
+RendererBackendOpengl::~RendererBackendOpengl() {
+  delete swapChain;
+}
 
 static bool loadGLLoaderIfNeeded(GLLoaderProc glLoaderProc) {
   static bool glLoaded = false;
@@ -65,7 +69,7 @@ void RendererBackendOpengl::shutdown() {
 }
 
 void RendererBackendOpengl::beginFrame() {
-  swapChain.makeCurrent();
+  swapChain->makeCurrent();
 
   glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -74,7 +78,7 @@ void RendererBackendOpengl::beginFrame() {
 }
 
 void RendererBackendOpengl::endFrame() {
-  swapChain.swapBuffers();
+  swapChain->swapBuffers();
 }
 
 uint32_t compileShader(GLenum stage, const char* str) {

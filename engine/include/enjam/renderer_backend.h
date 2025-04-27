@@ -92,11 +92,6 @@ struct VertexAttribute {
 
 static constexpr uint32_t VERTEX_ARRAY_MAX_SIZE = 16;
 
-//struct VertexArrayDesc {
-//  std::array<VertexAttribute, VERTEX_ARRAY_MAX_SIZE> attributes {};
-//  uint8_t attributesCount = 0;
-//};
-
 struct BufferDataDesc {
   using Callback = std::function<void(void*, uint64_t)>;
 

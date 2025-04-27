@@ -13,11 +13,9 @@ namespace Enjam {
 typedef void* (* GLLoaderProc)(const char* name);
 
 struct GLSwapChain {
-  using MakeCurrentFunc = std::function<void()>;
-  using SwapBuffersFunc = std::function<void()>;
-
-  MakeCurrentFunc makeCurrent;
-  SwapBuffersFunc swapBuffers;
+  virtual ~GLSwapChain() = default;
+  virtual void makeCurrent() = 0;
+  virtual void swapBuffers() = 0;
 };
 
 struct GLProgram : public ProgramHW {
@@ -28,7 +26,7 @@ struct GLProgram : public ProgramHW {
   };
 
   using DescriptorSet = std::array<DescriptorInfo, (size_t) ProgramData::MAX_DESCRIPTOR_BINDINGS_COUNT>;
-  std::array<DescriptorSet, (size_t) ProgramData::DESCRIPTOR_SET_COUNT> descriptorSets;
+  std::array<DescriptorSet, (size_t) ProgramData::DESCRIPTOR_SET_COUNT> descriptorSets {};
 };
 
 struct GLVertexAttribute {
@@ -111,7 +109,8 @@ class RendererBackendOpengl : public RendererBackend {
  public:
   using HandleAllocator = HandleAllocator<GLVertexBuffer, GLIndexBuffer, GLProgram, GLTexture, GLBufferData, GLDescriptorSet>;
 
-  explicit RendererBackendOpengl(GLLoaderProc, GLSwapChain);
+  explicit RendererBackendOpengl(GLLoaderProc, GLSwapChain*);
+  ~RendererBackendOpengl() override;
 
   bool init() override;
   void shutdown() override;
@@ -159,7 +158,7 @@ class RendererBackendOpengl : public RendererBackend {
 
  private:
   GLLoaderProc loaderProc;
-  GLSwapChain swapChain;
+  GLSwapChain* swapChain;
   HandleAllocator handleAllocator;
   GLuint defaultVertexArray;
   std::array<DescriptorSetHandle, ProgramData::DESCRIPTOR_SET_COUNT> boundDescriptorSets;

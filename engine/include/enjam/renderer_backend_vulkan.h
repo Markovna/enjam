@@ -61,8 +61,8 @@ class RendererBackendVulkan : public RendererBackend {
 
   VkInstance instance;
   VkSurfaceKHR surface;
-  VkDevice device;
-  VkQueue graphicsQueue;
+  VkDevice device = VK_NULL_HANDLE;
+  VkQueue graphicsQueue = VK_NULL_HANDLE;
   VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 };
 

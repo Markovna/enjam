@@ -4,6 +4,7 @@
 #include <enjam/renderer_backend.h>
 #include <enjam/vulkan_defines.h>
 #include <vulkan/vulkan.h>
+#include <enjam/math.h>
 
 namespace Enjam {
 
@@ -12,8 +13,8 @@ constexpr static const int VULKAN_MINIMUM_REQUIRED_VERSION_MINOR = 1;
 
 class RendererBackendVulkan : public RendererBackend {
  public:
-  explicit RendererBackendVulkan(VkInstance inst, VkSurfaceKHR surface)
-    : instance(inst), surface(surface) { }
+  explicit RendererBackendVulkan(VkInstance inst, VkSurfaceKHR surface, math::vec2i frameBufferSize)
+    : frameBufferSize(frameBufferSize), instance(inst), surface(surface) { }
 
   bool init() override;
   void shutdown() override;
@@ -57,10 +58,16 @@ class RendererBackendVulkan : public RendererBackend {
   void destroyTexture(TextureHandle handle) override;
 
  private:
+  VkSwapchainKHR createSwapChain();
+
+ private:
   struct VkAllocationCallbacks* vkAlloc = nullptr;
 
+  math::vec2i frameBufferSize;
   VkInstance instance;
   VkSurfaceKHR surface;
+  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+  VkSwapchainKHR swapChain;
   VkDevice device = VK_NULL_HANDLE;
   VkQueue graphicsQueue = VK_NULL_HANDLE;
   VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;

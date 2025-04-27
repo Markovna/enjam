@@ -5,6 +5,7 @@
 #include <set>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_beta.h>
+#include <enjam/vulkan_utils.h>
 
 namespace Enjam {
 
@@ -55,21 +56,6 @@ void createDebugUtilsMessenger(VkInstance instance, VkAllocationCallbacks* alloc
 }
 
 #endif
-
-std::unordered_set<std::string_view> getDeviceExtensions(
-    VkPhysicalDevice device) {
-  uint32_t extensionsCount;
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionsCount, nullptr);
-  std::vector<VkExtensionProperties> extensions(extensionsCount);
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionsCount, extensions.data());
-
-  std::unordered_set<std::string_view> set;
-  for(auto& prop : extensions) {
-    set.emplace(prop.extensionName);
-  }
-
-  return set;
-}
 
 int64_t getQueueFamilyIndex(VkPhysicalDevice device, VkQueueFlags flags) {
   uint32_t queueFamilyCount = 0;
@@ -142,7 +128,14 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
       continue;
     }
 
-    if(getQueueFamilyIndex(device, VK_QUEUE_GRAPHICS_BIT) < 0) {
+    auto graphicsQueueFamilyIndex = getQueueFamilyIndex(device, VK_QUEUE_GRAPHICS_BIT);
+    if(graphicsQueueFamilyIndex < 0) {
+      continue;
+    }
+
+    auto deviceExtensions = vulkan::utils::vkEnumerateDeviceExtensionProperties(device);
+    bool supportSwapChain = deviceExtensions.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) != deviceExtensions.end();
+    if(!supportSwapChain) {
       continue;
     }
 
@@ -177,13 +170,14 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, uint32_t queueFami
 
   VkPhysicalDeviceFeatures deviceFeatures { };
 
-  auto deviceExtensions = getDeviceExtensions(physicalDevice);
-  const std::unordered_set<std::string_view> desiredExtensions {
-      VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+  auto deviceExtensions = vulkan::utils::vkEnumerateDeviceExtensionProperties(physicalDevice);
+  const std::unordered_set<std::string_view> requestExtensions {
+      VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+      VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
 
   std::unordered_set<std::string_view> enabledExtensions;
-  for(auto& ext : desiredExtensions) {
+  for(auto& ext : requestExtensions) {
     if(deviceExtensions.find(ext) != deviceExtensions.end()) {
       enabledExtensions.insert(ext);
     }
@@ -223,12 +217,72 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, uint32_t queueFami
   return ret;
 }
 
+VkSwapchainKHR RendererBackendVulkan::createSwapChain() {
+  auto availableFormats = vulkan::utils::vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface);
+
+  ENJAM_ASSERT(!availableFormats.empty());
+
+  auto suitableFormat = std::find_if(
+       availableFormats.begin(), availableFormats.end(),
+       [](const VkSurfaceFormatKHR& format) {
+         return format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+       }
+  );
+  ENJAM_ASSERT(suitableFormat != availableFormats.end());
+
+  auto presentModes = vulkan::utils::vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface);
+  auto suitableMode = std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_FIFO_KHR);
+  ENJAM_ASSERT(suitableMode != presentModes.end());
+
+  VkSurfaceCapabilitiesKHR capabilities;
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
+
+  VkExtent2D extent;
+  const uint32_t undefinedExtent = std::numeric_limits<uint32_t>::max();
+  if(capabilities.currentExtent.width == undefinedExtent ||
+     capabilities.currentExtent.height == undefinedExtent) {
+
+    extent.width = std::clamp((uint32_t) frameBufferSize.x, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+    extent.height = std::clamp((uint32_t) frameBufferSize.y, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+  } else {
+    extent = capabilities.currentExtent;
+  }
+
+  uint32_t imageCount = capabilities.minImageCount + 1;
+  if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
+    imageCount = capabilities.maxImageCount;
+  }
+
+  VkSwapchainCreateInfoKHR createInfo;
+  createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  createInfo.surface = surface;
+  createInfo.minImageCount = imageCount;
+  createInfo.imageFormat = suitableFormat->format;
+  createInfo.imageColorSpace = suitableFormat->colorSpace;
+  createInfo.imageExtent = extent;
+  createInfo.imageArrayLayers = 1;
+  createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  createInfo.preTransform = capabilities.currentTransform;
+  createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  createInfo.presentMode = *suitableMode;
+  createInfo.clipped = VK_TRUE;
+  createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+  if(vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+    ENJAM_ERROR("Failed to create swap chain!");
+    return VK_NULL_HANDLE;
+  }
+
+  return swapChain;
+}
+
 bool RendererBackendVulkan::init() {
 #if ENJAM_VULKAN_ENABLED(ENJAM_VULKAN_DEBUG_UTILS)
   createDebugUtilsMessenger(instance, vkAlloc, &debugMessenger);
 #endif
 
-  VkPhysicalDevice physicalDevice = selectPhysicalDevice(instance);
+  physicalDevice = selectPhysicalDevice(instance);
   if(physicalDevice == VK_NULL_HANDLE) {
     ENJAM_ERROR("Vulkan failed to find a suitable GPU!");
   }
@@ -236,6 +290,8 @@ bool RendererBackendVulkan::init() {
   auto deviceQueueFamilyIndex = (uint32_t) getQueueFamilyIndex(physicalDevice, VK_QUEUE_GRAPHICS_BIT);
   device = createLogicalDevice(physicalDevice, deviceQueueFamilyIndex);
   vkGetDeviceQueue(device, deviceQueueFamilyIndex, 0, &graphicsQueue);
+
+  createSwapChain();
 
   return true;
 }
@@ -247,6 +303,7 @@ void RendererBackendVulkan::shutdown() {
   }
 #endif
 
+  vkDestroySwapchainKHR(device, swapChain, nullptr);
   vkDestroyDevice(device, nullptr);
   vkDestroySurfaceKHR(instance, surface, nullptr);
   vkDestroyInstance(instance, nullptr);
@@ -258,6 +315,7 @@ void RendererBackendVulkan::beginFrame() {
 void RendererBackendVulkan::endFrame() {
 
 }
+
 void RendererBackendVulkan::draw(ProgramHandle handle,
                                  VertexBufferHandle bufferHandle,
                                  IndexBufferHandle indexBufferHandle,
@@ -265,12 +323,15 @@ void RendererBackendVulkan::draw(ProgramHandle handle,
                                  uint32_t indexOffset) {
 
 }
+
 ProgramHandle RendererBackendVulkan::createProgram(ProgramData& data) {
   return Enjam::ProgramHandle();
 }
+
 void RendererBackendVulkan::destroyProgram(ProgramHandle handle) {
 
 }
+
 DescriptorSetHandle RendererBackendVulkan::createDescriptorSet(DescriptorSetData&& data) {
   return Enjam::DescriptorSetHandle();
 }

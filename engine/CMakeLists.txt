@@ -50,7 +50,7 @@ set(ENJAM_HEADERS
         include/enjam/texture.h
         include/enjam/dcc_asset.h
         include/enjam/math_assetparser.h
-        include/enjam/byte_array.h include/enjam/renderer_backend_vulkan.h include/enjam/vulkan_defines.h)
+        include/enjam/byte_array.h include/enjam/renderer_backend_vulkan.h include/enjam/vulkan_defines.h include/enjam/vulkan_utils.h)
 
 find_package(Vulkan REQUIRED)
 

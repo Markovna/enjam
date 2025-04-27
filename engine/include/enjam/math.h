@@ -982,6 +982,7 @@ using vec2f = Vec2<float>;
 using vec3f = Vec3<float>;
 using vec4f = Vec4<float>;
 using vec2i = Vec2<int32_t>;
+using vec2ui = Vec2<uint32_t>;
 using vec3i = Vec3<int32_t>;
 using vec4i = Vec4<int32_t>;
 using mat3f = Mat33<float>;

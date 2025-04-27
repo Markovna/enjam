@@ -130,7 +130,11 @@ std::unique_ptr<RendererBackend> PlatformGlfw::createRendererBackend(RendererBac
         return { };
       }
 
-      return std::make_unique<RendererBackendVulkan>(instance, surface);
+
+      int width, height;
+      glfwGetFramebufferSize(window, &width, &height);
+
+      return std::make_unique<RendererBackendVulkan>(instance, surface, math::vec2ui { width, height });
     }
     case DIRECTX:
       ENJAM_ERROR("DIRECTX renderer backend is not supported for current platform.");

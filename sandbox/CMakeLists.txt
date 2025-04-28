@@ -1,8 +1,8 @@
 set(CMAKE_DEBUG_POSTFIX "")
 
 set(SHADERS
-        shaders/vertex.glsl
-        shaders/fragment.glsl)
+        shaders/simple.vert
+        shaders/simple.frag)
 
 set(TEXTURES
         textures/dummy.png

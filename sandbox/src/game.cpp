@@ -42,11 +42,11 @@ class SandboxSimulation : public Enjam::Simulation {
 
   void start() override {
 
-    std::ifstream vertexShaderFile("shaders/vertex.glsl");
+    std::ifstream vertexShaderFile("shaders/simple.vert");
     std::stringstream vertexShaderStrBuffer;
     vertexShaderStrBuffer << vertexShaderFile.rdbuf();
 
-    std::ifstream fragmentShaderFile("shaders/fragment.glsl");
+    std::ifstream fragmentShaderFile("shaders/simple.frag");
     std::stringstream fragmentShaderStrBuffer;
     fragmentShaderStrBuffer << fragmentShaderFile.rdbuf();
 

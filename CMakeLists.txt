@@ -17,4 +17,7 @@ add_subdirectory(editor)
 add_subdirectory(tools/tex_importer)
 add_subdirectory(tools/dcc_importer)
 
+add_subdirectory(external/glslang EXCLUDE_FROM_ALL)
+add_subdirectory(tools/shader_importer)
+
 add_subdirectory(sandbox)

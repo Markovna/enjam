@@ -12,10 +12,10 @@ constexpr static const int VULKAN_MINIMUM_REQUIRED_VERSION_MAJOR = 1;
 constexpr static const int VULKAN_MINIMUM_REQUIRED_VERSION_MINOR = 1;
 
 struct VulkanSwapChain {
-  VkSwapchainKHR vkHandle;
-  std::vector<VkImage> images;
-  VkFormat imageFormat;
-  VkExtent2D extent;
+  VkSwapchainKHR vkHandle = VK_NULL_HANDLE;
+  VkFormat imageFormat = VkFormat::VK_FORMAT_UNDEFINED;
+  VkExtent2D extent { };
+  std::vector<VkImage> images { };
 };
 
 class RendererBackendVulkan : public RendererBackend {

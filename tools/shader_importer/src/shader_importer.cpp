@@ -7,13 +7,80 @@
 #include <SPIRV/SpvTools.h>
 
 using Path = std::filesystem::path;
+using SpirvBlob = std::vector<uint32_t>;
+
+bool OutputSpvBin(const SpirvBlob& spirv, std::ostream& out) {
+  for (int i = 0; i < (int)spirv.size(); ++i) {
+    unsigned int word = spirv[i];
+    out.write((const char*)&word, 4);
+  }
+  return true;
+}
+
+bool OutputSpvBin(const SpirvBlob& spirv, Enjam::ByteArray& bytes) {
+  bytes.resize(spirv.size() * sizeof(uint32_t));
+  uint32_t* curr = (uint32_t*) bytes.data();
+  for (size_t i = 0; i < spirv.size(); ++i) {
+    *curr = spirv[i];
+    curr++;
+  }
+  return true;
+}
+
+const char* getStageName(EShLanguage stage)
+{
+  const char* name;
+  switch (stage) {
+    case EShLangVertex:          name = "vert";    break;
+    case EShLangTessControl:     name = "tesc";    break;
+    case EShLangTessEvaluation:  name = "tese";    break;
+    case EShLangGeometry:        name = "geom";    break;
+    case EShLangFragment:        name = "frag";    break;
+    case EShLangCompute:         name = "comp";    break;
+    case EShLangRayGen:          name = "rgen";    break;
+    case EShLangIntersect:       name = "rint";    break;
+    case EShLangAnyHit:          name = "rahit";   break;
+    case EShLangClosestHit:      name = "rchit";   break;
+    case EShLangMiss:            name = "rmiss";   break;
+    case EShLangCallable:        name = "rcall";   break;
+    case EShLangMesh :           name = "mesh";    break;
+    case EShLangTask :           name = "task";    break;
+    default:                     name = "unknown";     break;
+  }
+
+  return name;
+}
 
 EShLanguage toShadingStage(const std::string& ext) {
-  if(ext == ".vert") {
+  auto stageName = ext;
+  if (stageName == ".vert")
     return EShLangVertex;
-  } else if(ext == ".frag") {
+  else if (stageName == ".tesc")
+    return EShLangTessControl;
+  else if (stageName == ".tese")
+    return EShLangTessEvaluation;
+  else if (stageName == ".geom")
+    return EShLangGeometry;
+  else if (stageName == ".frag")
     return EShLangFragment;
-  }
+  else if (stageName == ".comp")
+    return EShLangCompute;
+  else if (stageName == ".rgen")
+    return EShLangRayGen;
+  else if (stageName == ".rint")
+    return EShLangIntersect;
+  else if (stageName == ".rahit")
+    return EShLangAnyHit;
+  else if (stageName == ".rchit")
+    return EShLangClosestHit;
+  else if (stageName == ".rmiss")
+    return EShLangMiss;
+  else if (stageName == ".rcall")
+    return EShLangCallable;
+  else if (stageName == ".mesh")
+    return EShLangMesh;
+  else if (stageName == ".task")
+    return EShLangTask;
 
   return EShLangCount;
 }
@@ -28,7 +95,7 @@ bool generateAsset(const std::vector<Path>& inputPaths,
     EShLanguage stage;
     std::filesystem::path path;
 
-    Source(const char* str, EShLanguage stage, const std::filesystem::path& path)
+    Source(const char* str, EShLanguage stage, const Path& path)
       : text(strdup(str)), shader(new glslang::TShader(stage)), stage(stage), path(path)
     {
     }
@@ -47,9 +114,7 @@ bool generateAsset(const std::vector<Path>& inputPaths,
         free(text);
       }
 
-      if(shader != nullptr) {
-        delete shader;
-      }
+      delete shader;
     }
   };
 
@@ -80,8 +145,6 @@ bool generateAsset(const std::vector<Path>& inputPaths,
     shader->setEnhancedMsgs();
     shader->setEnvInput(glslang::EShSourceGlsl, source.stage, glslang::EShClientOpenGL, version);
     shader->setEnvClient(glslang::EShClientOpenGL, glslang::EShTargetOpenGL_450);
-//    shader->setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
-//    shader.setEnvInputVulkanRulesRelaxed();
 
     EShMessages messages = EShMsgDefault;
     bool result = shader->parse(GetResources(), version, false, messages, includer);
@@ -99,6 +162,8 @@ bool generateAsset(const std::vector<Path>& inputPaths,
       continue;
     }
 
+    shader->setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
+
     program.addShader(shader);
   }
 
@@ -112,18 +177,30 @@ bool generateAsset(const std::vector<Path>& inputPaths,
     ENJAM_INFO("Link succeeded! {} {}", program.getInfoLog(), program.getInfoDebugLog());
   }
 
-  std::vector<std::string> outputFiles;
 
-  using SpirvBlob = std::vector<uint32_t>;
+  Asset asset;
+
   for(auto& source : sources) {
     glslang::SpvOptions options;
-    spv::SpvBuildLogger logger;
     options.generateDebugInfo = true;
     SpirvBlob spirvOutput;
+    spv::SpvBuildLogger logger;
     glslang::GlslangToSpv(*program.getIntermediate((EShLanguage) source.stage), spirvOutput, &logger, &options);
 
-    ENJAM_INFO("{}", logger.getAllMessages().c_str());
+    Enjam::ByteArray spvBytes;
+    OutputSpvBin(spirvOutput, spvBytes);
+    Asset sourceAsset = Asset::object();
+    sourceAsset["spv"] = spvBytes;
+    sourceAsset["glsl"] = makeByteArray(source.text, strlen(source.text));
+    asset[getStageName(source.stage)] = sourceAsset;
+
+    if(!logger.getAllMessages().empty()) {
+      ENJAM_INFO("{}", logger.getAllMessages());
+    }
   }
+
+  AssetsFilesystemRep repository;
+  repository.save(outputPath, asset);
 
   return false;
 }

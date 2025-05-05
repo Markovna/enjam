@@ -66,6 +66,8 @@ class RendererBackendVulkan : public RendererBackend {
 
  private:
   VulkanSwapChain createSwapChain();
+  void createGraphicsPipeline(const ProgramData& data);
+  VkShaderModule createShaderModule(const ByteArray& code);
 
  private:
   struct VkAllocationCallbacks* vkAlloc = nullptr;

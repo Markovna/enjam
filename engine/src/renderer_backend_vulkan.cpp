@@ -159,6 +159,54 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
   return deviceInfos.back().device;
 }
 
+VkShaderModule RendererBackendVulkan::createShaderModule(const ByteArray& code) {
+  VkShaderModuleCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  createInfo.codeSize = code.size();
+  createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+  VkShaderModule shaderModule;
+  if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+    ENJAM_ERROR("Failed to create shader module!");
+    return VK_NULL_HANDLE;
+  }
+  return shaderModule;
+}
+
+void RendererBackendVulkan::createGraphicsPipeline(const ProgramData& data) {
+  auto& sources = data.getSource();
+  VkShaderModule vertShaderModule = createShaderModule(sources.at((size_t) ShaderStage::VERTEX));
+  VkShaderModule fragShaderModule = createShaderModule(sources.at((size_t) ShaderStage::FRAGMENT));
+
+  VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+  vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+  vertShaderStageInfo.module = vertShaderModule;
+  vertShaderStageInfo.pName = "main";
+
+  VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+  fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+  fragShaderStageInfo.module = fragShaderModule;
+  fragShaderStageInfo.pName = "main";
+
+  VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+  std::vector<VkDynamicState> dynamicStates = {
+      VK_DYNAMIC_STATE_VIEWPORT,
+      VK_DYNAMIC_STATE_SCISSOR
+  };
+
+  VkPipelineDynamicStateCreateInfo dynamicState{};
+  dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+  dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+  dynamicState.pDynamicStates = dynamicStates.data();
+
+
+
+  vkDestroyShaderModule(device, fragShaderModule, nullptr);
+  vkDestroyShaderModule(device, vertShaderModule, nullptr);
+}
+
 VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex) {
   float queuePriority = 1.0f;
   VkDeviceQueueCreateInfo queueCreateInfo {

@@ -2,8 +2,8 @@
 
 namespace Enjam {
 
-ProgramData &ProgramData::setShader(ShaderStage stage, const char* shaderCode) {
-  source[(size_t) stage] = std::string(shaderCode);
+ProgramData &ProgramData::setShader(ShaderStage stage, const ByteArray& shaderCode) {
+  source[(size_t) stage] = shaderCode;
   return *this;
 }
 

@@ -81,10 +81,11 @@ void RendererBackendOpengl::endFrame() {
   swapChain->swapBuffers();
 }
 
-uint32_t compileShader(GLenum stage, const char* str) {
+uint32_t compileShader(GLenum stage, const uint8_t* data, int32_t size) {
   uint32_t id;
   id = glCreateShader(stage);
-  glShaderSource(id, 1, &str, NULL);
+  auto str = reinterpret_cast<const char*>(data);
+  glShaderSource(id, 1, &str, &size);
   glCompileShader(id);
 
   // check for compile errors
@@ -105,8 +106,11 @@ ProgramHandle RendererBackendOpengl::createProgram(ProgramData& data) {
   uint32_t id = glCreateProgram();
 
   auto& source = data.getSource();
-  uint32_t vertex = compileShader(GL_VERTEX_SHADER, source[(size_t)ShaderStage::VERTEX].c_str());
-  uint32_t fragment = compileShader(GL_FRAGMENT_SHADER, source[(size_t)ShaderStage::FRAGMENT].c_str());
+  auto vertSource = source[(size_t)ShaderStage::VERTEX];
+  uint32_t vertex = compileShader(GL_VERTEX_SHADER, vertSource.data(), vertSource.size());
+
+  auto fragSource = source[(size_t)ShaderStage::FRAGMENT];
+  uint32_t fragment = compileShader(GL_FRAGMENT_SHADER, fragSource.data(), fragSource.size());
 
   glAttachShader(id, vertex);
   glAttachShader(id, fragment);

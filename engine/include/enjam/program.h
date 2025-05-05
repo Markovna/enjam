@@ -2,6 +2,7 @@
 #define INCLUDE_ENJAM_PROGRAM_H_
 
 #include <enjam/assert.h>
+#include <enjam/byte_array.h>
 #include <array>
 #include <string>
 #include <vector>
@@ -13,6 +14,11 @@ enum class ShaderStage {
   FRAGMENT,
 
   COUNT
+};
+
+enum class ShaderLanguage {
+  GLSL,
+  SPV
 };
 
 class ProgramData {
@@ -29,12 +35,13 @@ class ProgramData {
 
   static constexpr size_t MAX_DESCRIPTOR_BINDINGS_COUNT = 16;
   static constexpr size_t DESCRIPTOR_SET_COUNT = 4;
-  using ProgramSource = std::array<std::string, (size_t) ShaderStage::COUNT>;
+  using ProgramSource = std::array<ByteArray, (size_t) ShaderStage::COUNT>;
   using DescriptorSetInfo = std::vector<DescriptorInfo>;
   using DescriptorsMap = std::array<DescriptorSetInfo, (size_t) DESCRIPTOR_SET_COUNT>;
 
-  ProgramData& setShader(ShaderStage, const char *source);
+  ProgramData& setShader(ShaderStage, const ByteArray& source);
   ProgramSource& getSource() { return source; }
+  const ProgramSource& getSource() const { return source; }
 
   ProgramData& setDescriptorSet(uint8_t set, DescriptorSetInfo&& setInfo) {
     ENJAM_ASSERT(setInfo.size() < MAX_DESCRIPTOR_BINDINGS_COUNT);

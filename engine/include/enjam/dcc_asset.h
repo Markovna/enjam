@@ -50,17 +50,20 @@ class DCCAsset {
 
 class DCCAssetFactory {
  private:
-  template<class T>
-  std::vector<T> copyBuffer(ByteArray buffer) {
-    return utils::reinterpret_copy<T>(buffer.data(), buffer.size());
+  template<class T, std::enable_if_t<std::is_trivially_copyable<T>::value, nullptr_t> = nullptr>
+  std::vector<T> reinterpret(const ByteArray& src) {
+    ENJAM_ASSERT(src.size() % sizeof(T) == 0);
+    std::vector<T> dst(src.size() / sizeof(T));
+    std::copy_n(reinterpret_cast<const T*>(src.data()), dst.size(), dst.begin());
+    return dst;
   }
 
  public:
   AssetRef<DCCAsset> operator()(const Asset& asset) {
-    auto indices = copyBuffer<uint32_t>(asset.at("indices")->loadBuffer());
-    auto positions = copyBuffer<math::vec3f>(asset.at("positions")->loadBuffer());
-    auto texCoords0 = copyBuffer<math::vec2f>(asset.at("texCoords0")->loadBuffer());
-    auto texCoords1 = copyBuffer<math::vec2f>(asset.at("texCoords1")->loadBuffer());
+    auto indices = reinterpret<uint32_t>(asset.at("indices")->loadBuffer());
+    auto positions = reinterpret<math::vec3f>(asset.at("positions")->loadBuffer());
+    auto texCoords0 = reinterpret<math::vec2f>(asset.at("texCoords0")->loadBuffer());
+    auto texCoords1 = reinterpret<math::vec2f>(asset.at("texCoords1")->loadBuffer());
 
     std::vector<DCCAsset::Node> nodes;
     for (auto& assetNode: *asset.at("nodes")) {
